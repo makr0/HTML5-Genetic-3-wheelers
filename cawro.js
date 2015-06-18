@@ -362,9 +362,9 @@ function cw_generationZero() {
   document.getElementById("population").innerHTML = "Cars alive: "+generationSize;
   ghost = ghost_create_ghost();
   
-  if (_gaq != undefined) {
+  if (window['_gaq'] != undefined) {
     _gaq.push(['_trackEvent', 'Genetic', 'New generation']);
-  } else if (ga != undefined) {
+  } else if (window['ga'] != undefined) {
     ga('send', 'event', 'generation', 'new', 'New generation');
   }
 }
