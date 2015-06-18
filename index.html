@@ -227,6 +227,13 @@
           <option value="10">10</option>
         </select>
       </div>
+      <div>
+       Breeding Option:
+       <select id="breedingoption" onchange="cw_setBreedingOption(this.options[this.selectedIndex].value)">
+	<option value="random">Default Random</option>
+	<option value="exp">Exponential Probability</option>
+       </select>
+      </div>
       <div id="generation"></div>
       <div id="population"></div>
       <div id="distancemeter"></div>
