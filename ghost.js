@@ -108,11 +108,10 @@ function ghost_draw_frame(ctx, ghost) {
   ctx.strokeStyle = "#aaa";
   ctx.lineWidth = 1/zoom;
 
-  for (w in frame.wheel1)
-    ghost_draw_circle(ctx, frame.wheel1[w].pos, frame.wheel1[w].rad, frame.wheel1[w].ang);
-
-  for (w in frame.wheel2)
-    ghost_draw_circle(ctx, frame.wheel2[w].pos, frame.wheel2[w].rad, frame.wheel2[w].ang);
+  _.each(frame.wheels, function(wheel) {
+    for (w in wheel)
+      ghost_draw_circle(ctx, wheel[w].pos, wheel[w].rad, wheel[w].ang);
+  });
 
   // chassis style
   ctx.strokeStyle = "#fbb";
@@ -128,8 +127,7 @@ function ghost_draw_frame(ctx, ghost) {
 function ghost_get_frame(car) {
   return {
     chassis : ghost_get_chassis(car.chassis),
-    wheel1  : ghost_get_wheel(car.wheel1),
-    wheel2  : ghost_get_wheel(car.wheel2),
+    wheels  : ghost_get_wheels(car.wheels),
     pos     : {x: car.getPosition().x, y: car.getPosition().y}
   }
 }
@@ -157,6 +155,9 @@ function ghost_get_chassis(c) {
   return gc;
 }
 
+function ghost_get_wheels(wheels) {
+  return _.map(wheels, ghost_get_wheel);
+}
 function ghost_get_wheel(w) {
   var gw = [];
 
