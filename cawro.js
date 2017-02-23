@@ -1,7 +1,7 @@
 // Global Vars
 var ghost;
 var targetFPS = 60;
-var updateDom_every_n_frame = 30;
+var updateDom_every_n_frame = targetFPS/5;
 var needDom_update = updateDom_every_n_frame;
 var timeStep = 1.0 / targetFPS;
 
@@ -15,6 +15,7 @@ var debugbox = document.getElementById("debug");
 
 var canvas = document.getElementById("mainbox");
 var ctx = canvas.getContext("2d");
+
 
 var cameraspeed = 0.5;
 var camera_y = 0;
@@ -31,7 +32,7 @@ var minimapcanvas = document.getElementById("minimap");
 var minimapctx = minimapcanvas.getContext("2d");
 var minimapscale = 3;
 
-var generationSize = 16;
+var generationSize = 20;
 var cw_carGeneration = new Array();
 var cw_carScores = new Array();
 var cw_topScores = new Array();
@@ -46,7 +47,7 @@ var gen_parentality = 0.2;
 var gen_mutation = 0.05;
 var mutation_range = 1;
 var gen_counter = 0;
-var nWheels = 6;
+var nWheels = 2;
 var nAttributes = 9 + 3 * nWheels; // change this when genome changes
 
 var gravity = new b2Vec2(0.0, -9.81);
@@ -55,9 +56,9 @@ var doSleep = true;
 
 var world;
 
-var zoom = 50;
+var zoom = 40;
 
-var mutable_floor = false;
+var mutable_floor = true;
 
 var maxFloorTiles = 200;
 var cw_floorTiles = new Array();
@@ -66,22 +67,21 @@ var last_drawn_tile = 0;
 var groundPieceWidth = 1.5;
 var groundPieceHeight = 0.15;
 
-var chassisMaxAxis = 1.5;
-var chassisMinAxis = 0.1;
+var chassisMaxAxis = 1.8;
+var chassisMinAxis = 0.01;
 var chassisMinDensity = 30;
-var chassisMaxDensity = 300;
+var chassisMaxDensity = 3000;
 
-var wheelMaxRadius = 0.6;
+var wheelMaxRadius = 0.8;
 var wheelMinRadius = 0.2;
-var wheelMaxDensity = 100;
+var wheelMaxDensity = 300;
 var wheelMinDensity = 40;
 
 var velocityIndex = 0;
 var deathSpeed = 0.1;
 var max_car_health = box2dfps * 10;
-var car_health = max_car_health;
 
-var motorSpeed = 20;
+var motorSpeed = 30;
 
 var swapPoint1 = 0;
 var swapPoint2 = 0;
@@ -105,8 +105,10 @@ function debug(str, clear) {
 }
 
 function showDistance(distance, height) {
-  distanceMeter.innerHTML = distance+" meters<br />";
-  distanceMeter.innerHTML += height+" meters";
+  if( doDraw ) {
+    distanceMeter.innerHTML = distance+" meters<br />";
+    distanceMeter.innerHTML += height+" meters";
+  }
 }
 
 /* ========================================================================= */
@@ -196,18 +198,18 @@ cw_Car.prototype.checkDeath = function() {
     this.minPositiony = position.y;
   }
 
-  if(position.x > this.maxPosition + 0.02 && position.y > -500 ) {
+  if(position.x > this.maxPosition + 0.02 && position.y > -300 ) {
     this.health = max_car_health;
     this.maxPosition = position.x;
   } else {
     if(position.x > this.maxPosition) {
       this.maxPosition = position.x;
     }
-    if(Math.abs(this.chassis.GetLinearVelocity().x) < 0.001) {
+    if(Math.abs(this.chassis.GetLinearVelocity().x) < deathSpeed) {
       this.health -= 5;
     }
     this.health--;
-    if(position .y < -500) this.health = 0; // fell off the track
+    if(position .y < -300) this.health = 0; // fell off the track
     if(this.health <= 0) {
       this.healthBarText.innerHTML = "&#8708;";
       this.healthBar.width = "0";
@@ -656,7 +658,8 @@ function toggleDisplay() {
   if(doDraw) {
     doDraw = false;
     cw_stopSimulation();
-    cw_runningInterval = setInterval(simulationStep, 1); // simulate 1000x per second when not drawing
+    distanceMeter.innerHTML = "";
+    cw_runningInterval = setInterval(simulationStep, 0); // simulate 1000x per second when not drawing
   } else {
     doDraw = true;
     clearInterval(cw_runningInterval);
@@ -759,7 +762,7 @@ function simulationStep() {
       leaderPosition.leader = k;
     }
   }
-  if( needDom_update == 0) {
+  if( needDom_update == 0 && doDraw) {
     showDistance(Math.round(leaderPosition.x*100)/100, Math.round(leaderPosition.y*100)/100);
   }
   if( needDom_update == 0) needDom_update = updateDom_every_n_frame;
