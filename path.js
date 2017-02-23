@@ -14,6 +14,7 @@ function cw_createFloor() {
       // if path is mutable over races, create smoother tracks
       last_tile = cw_createFloorTile(tile_position, (Math.random()*3 - 1.5) * 1.2*k/maxFloorTiles);
     }
+//    last_tile = cw_createFloorTile(tile_position, 0);
     cw_floorTiles.push(last_tile);
     last_fixture = last_tile.GetFixtureList();
     last_world_coords = last_tile.GetWorldPoint(last_fixture.GetShape().m_vertices[3]);

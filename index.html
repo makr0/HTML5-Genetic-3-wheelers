@@ -1,286 +1,326 @@
+
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>HTML5 Genetic Algorithm 2D 3-Wheelers - Chrome recommended</title>
-    <style>
-      body, input {
-		font-family: Helvetica, sans serif;
+<head>
+  <meta charset="utf-8" />
+  <title>HTML5 Genetic Algorithm 2D 3-Wheelers - Chrome recommended</title>
+  <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
+  <style>
+    body, input {
+      font-family: Helvetica, sans serif;
+    }
+    body {
+      background: #eee;
+    }
+    #mainbox {
+      width: 700px;
+      height: 400px;
+    }
+    #stats {
+      position: absolute;
+      top: 8px;    left: 8px;
+    }
+    #graphholder {
+      position: relative;
+    }
+    #graphholder .scale {
+      position: absolute;
+      left: 385px;
+    }
+    #s0   { top: 236px; }
+    #s25  { top: 187px; }
+    #s50  { top: 125px; }
+    #s75  { top:  62px; }
+    #s100 { top:   0px; }
+
+    .background_and_border {
+      border: 1px solid #999;
+      border-radius: 5px;
+      background: #fff;
+    }
+    #minimapholder {
+      position: relative;
+      border: 1px solid #999;
+      border-radius: 5px;
+      width: 700px;
+      height: 200px;
+      overflow: hidden;
+    }
+    .minimapmarker {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1px;
+      height: 200px;
+      z-index: 5;
+      border-left: 1px solid #444;
+      font-size: 9px;
+      padding-left: 2px;
+    }
+    #minimapfog {
+      width: 798px;
+      height: 198px;
+      position: absolute;
+      top: 1px;
+      right: 1px;
+      z-index: 2;
+      background-color: white;
+    }
+    #minimapcamera {
+      position: absolute;
+      top: 0px;
+      left: 1px;
+      height: 199px;
+      width: 50px;
+      z-index: 3;
+      border: 1px dashed #888;
+    }
+    .healthbar {
+      cursor: pointer;
+      position: relative;
+      border: 1px solid #444;
+      width: 100px;
+      height: 15px;
+      padding: 2px;
+      margin-left: 23px;
+    }
+      .healthbar .health {
+        height: 100%;
+        width: 100%;
+        background-color: red;
       }
-      body {
-        background: #eee;
-      }
-      #mainbox {
-        width: 800px;
-        height: 400px;
-        border: 1px solid black;
-        background: #fff;
-      }
-      #div {
-        width: 800px;
-        height: 400px;
-        border: 1px solid black;
-      }
-      #data {
-        position: absolute;
-        left: 820px;
-        top: 20px;
-        width: 300px;
-        height: 400px;
-      }
-      #graphholder {
-        position: relative;
-      }
-      #graphholder .scale {
-        position: absolute;
-        left: 405px;
-        font-size: 9px;
-      }
-      #s0 { top: 240px; }
-      #s25 { top: 187px; }
-      #s50 { top: 125px; }
-      #s75 { top: 62px; }
-      #s100 { top: 0px; }
-      #graphcanvas {
-        border: 1px solid black;
-        background: #fff;
-      }
-      #topscoreholder {
-        width: 300px;
-        height: 400px;
-        position: absolute;
-        top: 420px;
-        left: 445px;
-        font-size: 11px;
-      }
-      #minimapholder {
-        position: relative;
-        border: 1px solid black;
-        width: 800px;
-        height: 200px;
-        overflow: hidden;
-      }
-      .minimapmarker {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 1px;
-        height: 200px;
-        z-index: 5;
-        border-left: 1px solid #444;
-        font-size: 9px;
-        padding-left: 2px;
-      }
-      .silverdot {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 1px;
-        height: 200px;
-        z-index: 4;
-      }
-      #minimapfog {
-        width: 798px;
-        height: 198px;
-        position: absolute;
-        top: 1px;
-        right: 1px;
-        z-index: 2;
-        background-color: white;
-      }
-      #minimapcamera {
+      .healthbar .healthtext {
         position: absolute;
         top: 0px;
-        left: 1px;
-        height: 199px;
-        width: 50px;
-        z-index: 3;
-        border: 1px dashed #888;
+        left: -20px;
       }
-      .healthbar {
-        cursor: pointer;
-        position: relative;
-        border: 1px solid #444;
-        width: 100px;
-        height: 15px;
-        padding: 2px;
-        margin-left: 23px;
-      }
-        .healthbar .health {
-          height: 100%;
-          width: 100%;
-          background-color: red;
-        }
-        .healthbar .healthtext {
-          position: absolute;
-          top: 0px;
-          left: -20px;
-        }
-        
-		#cardef_loader {
-			width:900px;
-			height:110px;
-		}
-		.elitecolor {
-			color: rgb(68, 68, 204);
-		}
+
+    #cardef_loader {
+      width:900px;
+      height:110px;
+    }
+    .elitecolor {
+      color: rgb(68, 68, 204);
+    }
     </style>
-  </head>
-  <body>
-    <canvas id="mainbox" width="800" height="400"></canvas>
-    <div id="graphholder">
-      <canvas id="graphcanvas" width="400" height="250"></canvas>
-      <div class="scale" id="s100">250</div>
-      <div class="scale" id="s75">187</div>
-      <div class="scale" id="s50">125</div>
-      <div class="scale" id="s25">62</div>
-      <div class="scale" id="s0">0</div>
-    </div>
-    <div id="minimapholder">
-      <!--<img src="reddot.png" id="minimapmarker" />-->
-      <div id="minimapfog"></div>
-      <canvas id="minimap" width="800" height="200"></canvas>
-      <div id="minimapcamera"></div>
-    </div>
-    <div id="topscoreholder">
-    <input type="button" value="View top replay" onclick="cw_toggleGhostReplay(this)" /><br />
-      <div id="topscores"></div>
-    </div>
-    <div id="debug"></div>
-    <div id="data">
-      <input type="button" value="Surprise!"      onclick="toggleDisplay()" />
-      <input type="button" value="New Population" onclick="cw_resetPopulation()" />
-      <div>
-        Create new world with seed:
-        <input type="text" value="Enter any string" id="newseed" />
-        <input type="button" value="Go!" onclick="cw_confirmResetWorld()" />
+</head>
+<body>
+  <div class="container">
+    <div class="row">
+      <div class="col-md-9">
+        <h2>
+          Genetic n-Wheelers <span class="small">by <a href="https://github.com/makr0/HTML5-Genetic-n-wheelers">makr0</a></span>
+        </h2>
+        <div style="position:relative;">
+          <canvas id="mainbox" width="700" height="400" class="background_and_border"></canvas>
+          <div id="stats" class="small">
+            <strong>Generations:</strong> <span id="generation"></span><br>
+            <strong>Cars alive:</strong>  <span id="population"></span><br>
+            <strong>Distance:</strong>  <span id="distancemeter">0</span> m
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-sm-7">
+            <div id="graphholder">
+              <canvas id="graphcanvas" width="380" height="250" class="background_and_border"></canvas>
+              <div class="scale small" id="s100">250</div>
+              <div class="scale small" id="s75">187</div>
+              <div class="scale small" id="s50">125</div>
+              <div class="scale small" id="s25">62</div>
+              <div class="scale small" id="s0">0</div>
+            </div>
+          </div>
+          <div class="col-sm-5">
+            <div id="topscoreholder" class="small">
+              <input type="button" class="btn btn-default btn-sm" value="View top replay" onclick="cw_toggleGhostReplay(this)" /><br />
+              <div id="topscores"></div>
+            </div>
+          </div>
+        </div>
+        <div id="minimapholder">
+          <canvas id="minimap" width="700" height="200"></canvas>
+          <div id="minimapcamera"></div>
+        </div>
+        <div id="debug"></div>
       </div>
-      <div>
-        Mutation rate:
-        <select id="mutationrate" onchange="cw_setMutation(this.options[this.selectedIndex].value)">
-          <option value="0">0%</option>
-          <option value="0.01">1%</option>
-          <option value="0.02">2%</option>
-          <option value="0.03">3%</option>
-          <option value="0.04">4%</option>
-          <option value="0.05" selected="selected">5%</option>
-          <option value="0.1">10%</option>
-          <option value="0.2">20%</option>
-          <option value="0.3">30%</option>
-          <option value="0.4">40%</option>
-          <option value="0.5">50%</option>
-          <option value="0.75">75%</option>
-          <option value="1.0">100%</option>
-        </select>
+      <div class="col-md-3">
+
+        <h3>Controls</h3>
+
+        <input type="button" class="btn btn-default btn-sm" value="Speed up! (hide cars)"      id="toggledisplay" onclick="toggleDisplay()" />
+        <input type="button" class="btn btn-default btn-sm" value="New Population" onclick="cw_resetPopulation()" />
+        <br /><br />
+        <div>
+          Create new world:
+          <div class="input-group">
+            <input type="text"   class="form-control" placeholder="Enter any string" id="newseed" />
+            <span class="input-group-btn">
+              <button class="btn btn-default" onclick="cw_confirmResetWorld()">Go!</button>
+            </span>
+          </div>
+        </div>
+        <br />
+      <div class="row">
+        <div class="col-xs-5 small">Mutation rate</div>
+        <div class="col-xs-7">
+          <select id="mutationrate" class="btn btn-default btn-sm" onchange="cw_setMutation(this.options[this.selectedIndex].value)">
+            <option value="0">0%</option>
+            <option value="0.01">1%</option>
+            <option value="0.02">2%</option>
+            <option value="0.03">3%</option>
+            <option value="0.04">4%</option>
+            <option value="0.05" selected="selected">5%</option>
+            <option value="0.1">10%</option>
+            <option value="0.2">20%</option>
+            <option value="0.3">30%</option>
+            <option value="0.4">40%</option>
+            <option value="0.5">50%</option>
+            <option value="0.75">75%</option>
+            <option value="1.0">100%</option>
+          </select>
+        </div>
       </div>
-      <div>
-        Mutation size:
-        <select id="mutationsize" onchange="cw_setMutationRange(this.options[this.selectedIndex].value)">
-          <option value="0">0%</option>
-          <option value="0.01">1%</option>
-          <option value="0.02">2%</option>
-          <option value="0.03">3%</option>
-          <option value="0.04">4%</option>
-          <option value="0.05">5%</option>
-          <option value="0.1">10%</option>
-          <option value="0.2">20%</option>
-          <option value="0.3">30%</option>
-          <option value="0.4">40%</option>
-          <option value="0.5">50%</option>
-          <option value="0.75">75%</option>
-          <option value="1.0" selected="selected">100%</option>
-        </select>
+      <div class="row">
+        <div class="col-xs-5 small">Mutation Range</div>
+        <div class="col-xs-7">
+          <select id="mutationsize" class="btn btn-default btn-sm" onchange="cw_setMutationRange(this.options[this.selectedIndex].value)">
+            <option value="0">0%</option>
+            <option value="0.01">1%</option>
+            <option value="0.02">2%</option>
+            <option value="0.03">3%</option>
+            <option value="0.04">4%</option>
+            <option value="0.05">5%</option>
+            <option value="0.1">10%</option>
+            <option value="0.2">20%</option>
+            <option value="0.3">30%</option>
+            <option value="0.4">40%</option>
+            <option value="0.5">50%</option>
+            <option value="0.75">75%</option>
+            <option value="1.0" selected="selected">100%</option>
+          </select>
+        </div>
       </div>
-      <div>
-        Floor:
-        <select id="floor" onchange="cw_setMutableFloor(this.options[this.selectedIndex].value)">
-          <option value="0" selected="selected">fixed</option>
-          <option value="1">mutable</option>
-        </select>
+      <div class="row">
+        <div class="col-xs-5">Floor</div>
+        <div class="col-xs-7">
+          <select id="floor" class="btn btn-default btn-sm" onchange="cw_setMutableFloor(this.options[this.selectedIndex].value)">
+            <option value="0" selected="selected">fixed</option>
+            <option value="1">mutable</option>
+          </select>
+        </div>
       </div>
-      <div>
-        Gravity:
-        <select id="gravity" onchange="cw_setGravity(this.options[this.selectedIndex].value)">
-          <option value="24.8">Jupiter (24.8)</option>
-          <option value="11.2">Neptune (11.2)</option>
-          <option value="10.4">Saturn (10.4)</option>
-          <option value="9.81" selected="selected">Earth (9.81)</option>
-          <option value="8.9">Venus (8.9)</option>
-          <option value="8.7">Uranus (8.7)</option>
-          <option value="3.7">Mars/Mercury (3.7)</option>
-          <option value="1.6">Moon (1.6)</option>
-        </select>
+      <div class="row">
+        <div class="col-xs-5">Gravity</div>
+        <div class="col-xs-7">
+          <select id="gravity" class="btn btn-default btn-sm" onchange="cw_setGravity(this.options[this.selectedIndex].value)">
+            <option value="24.8">Jupiter (25)</option>
+            <option value="11.2">Neptune (11)</option>
+            <option value="10.4">Saturn (10)</option>
+            <option value="9.81" selected="selected">Earth (9.81)</option>
+            <option value="8.9">Venus (8.9)</option>
+            <option value="8.7">Uranus (8.7)</option>
+            <option value="3.7">Mars (3.7)</option>
+            <option value="3.7">Mercury (3.7)</option>
+            <option value="1.6">Moon (1.6)</option>
+          </select>
+        </div>
       </div>
-	  <div>
-        Elite clones:
-        <select id="elitesize" onchange="cw_setEliteSize(this.options[this.selectedIndex].value)">
-          <option value="0">0</option>
-          <option value="1" selected="selected">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-          <option value="6">6</option>
-          <option value="7">7</option>
-          <option value="8">8</option>
-          <option value="9">9</option>
-          <option value="10">10</option>
-        </select>
+      <div class="row">
+        <div class="col-xs-5">Elite</div>
+        <div class="col-xs-7">
+          <select id="elitesize" class="btn btn-default btn-sm" onchange="cw_setEliteSize(this.options[this.selectedIndex].value)">
+            <option value="0">0</option>
+            <option value="1" selected="selected">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+          </select>
+        </div>
       </div>
-      <div>
-       Breeding Option:
-       <select id="breedingoption" onchange="cw_setBreedingOption(this.options[this.selectedIndex].value)">
-	<option value="random">Default Random</option>
-	<option value="exp">Exponential Probability</option>
-       </select>
+      <div class="row">
+        <div class="col-xs-5">Breeding</div>
+        <div class="col-xs-7">
+          <select id="breedingoption" class="btn btn-default btn-sm"
+                 onchange="cw_setBreedingOption(this.options[this.selectedIndex].value)">
+           <option value="random">Default Random</option>
+           <option value="exp">Exponential Probability</option>
+          </select>
+        </div>
+      </div>
+        <br />
+        <input type="button" class="btn btn-default btn-sm"
+               value="Watch Leader" onclick="cw_setCameraTarget(-1)" />
+        <div id="health"></div>
+        <div id="cars"></div>
       </div>
       <div id="generation"></div>
       <div id="population"></div>
       <div id="distancemeter"></div>
-      <input type="button" value="Watch Leader" onclick="cw_setCameraTarget(-1)" />
-      <div id="health"></div>
-      <div id="cars"></div>
-    </div>
-    <div id="explanation">
-      <h3>What is it</h3>
-      The program uses a simple genetic algorithm to evolve random three-wheeled shapes into cars over generations.<br />
-      The code is on a <a href="https://github.com/formikaio/HTML5-Genetic-3-wheelers">GitHub repository</a>. Feel free to contribute!
-      <h3>Controls</h3>
-      Suprise: Toggles drawing, makes the simulation faster.<br />
-      New Population: Keeps the generated track and restarts the whole car population.<br />
-      Create new world with seed: The same seed always creates the same track, so you can agree on a seed with your friends and compete. :)<br />
-      Mutation rate: The chance that each gene in each individual will mutate to a random value when a new generation is born.<br />
-      Mutation size: The range each gene can mutate into. Lower numbers mean the gene will have values closer to the original.<br />
-	  Floor: fixed or mutable for every next generation<br />
-	  Gravity: our Earth is the default, but you can try it in another planets :)<br />
-      Elite clones: The top n cars that will be copied over to the next generation.<br />
-      View top replay: Pause the current simulation and show the top performing car. Click a second time to resume simulation.
-      <h3>Graph</h3>
-      Red: Top score in each generation.<br />
-      Green: Average of the top 10 cars in each generation.<br />
-      Blue: Average of the entire generation.
-      <h3>Genome</h3>
-      The genome consists of:<br />
-      - Shape: (8 genes, 1 per vertex)<br />
-      - Wheel size: (3 genes, 1 per wheel)<br />
-      - Wheel position: (3 genes, 1 per wheel)<br />
-      - Wheel density: (3 genes, 1 per wheel) darker wheels mean denser wheels<br />
-      - Chassis density: (1 gene) darker body means denser chassis
-      <h3>Blurb</h3>
-      This is not as deterministic as it should be, so your best car may not perform as well as it once did. The terrain gets more complex with distance.<br />
-      Developed by <a href="http://www.whiletrue.it">WhileTrue</a>, mostly inspired by the 2-wheel <a href="https://github.com/red42/HTML5_Genetic_Cars">HTML5 Genetic Cars</a>.
-    </div>
-    <div name="minimapmarker" class="minimapmarker"></div>
-    <div name="healthbar" class="healthbar" onclick="cw_setCameraTarget(this.car_index)">
-      <div name="health" class="health"></div>
-      <div name="healthtext" class="healthtext"></div>
     </div>
 
-    <script src="lib/seedrandom.js"></script>
-    <script src="lib/box2d.js"></script>
-    <script src="ghost.js"></script>
-    <script src="path.js"></script>
-    <script src="cawro.js"></script>
-    <script src="graphs.js"></script>
-  </body>
+    <br />
+    <div class="panel panel-default">
+      <div class="panel-heading"> Info
+      </div>
+      <div class="panel-body">
+        <h3>What is it?</h3>
+        The program uses a simple genetic algorithm to evolve random three-wheeled shapes into cars over generations; the terrain gets more complex with distance.<br />
+        The code is on a <a href="https://github.com/formikaio/HTML5-Genetic-3-wheelers">GitHub repository</a>. Feel free to contribute!
+        Developed by <a href="http://www.whiletrue.it">WhileTrue</a>, heavily inspired by <a href="https://github.com/red42/HTML5_Genetic_Cars">HTML5 Genetic Cars</a>.
+
+        <h3>Controls</h3>
+        <ul>
+        <li>Speed up! (hide cars): Toggles drawing, makes the simulation faster</li>
+        <li>New Population: Keeps the generated track and restarts the whole car population</li>
+        <li>Create new world: The same string (seed) always creates the same track, so you can agree on a string with your friends and compete. :)</li>
+        <li>Mutation rate: The chance that each gene in each individual will mutate to a random value when a new generation is born</li>
+        <li>Mutation size: The range each gene can mutate into. Lower numbers mean the gene will have values closer to the original</li>
+        <li>Floor: fixed or mutable for every next generation</li>
+        <li>Gravity: our Earth is the default, but you can try it in another planets :)</li>
+        <li>Elite: The top <i>n</i> cars that will be copied over to the next generation</li>
+        <li>View top replay: Pause the current simulation and show the top performing car. Click again to resume simulation</li>
+        </ul>
+
+        <h3>Graph</h3>
+        <ul>
+        <li>Red: Top score in each generation</li>
+        <li>Green: Average of the top 10 cars in each generation</li>
+        <li>Blue: Average of the entire generation</li>
+        </ul>
+
+        <h3>Genome</h3>
+        The genome consists of:
+        <ul>
+        <li>Shape: (8 genes, 1 per vertex)</li>
+        <li>Chassis density: (1 gene) darker body means denser chassis</li>
+        <li>Wheel size: (3 genes, 1 per wheel)</li>
+        <li>Wheel position: (3 genes, 1 per wheel)</li>
+        <li>Wheel density: (3 genes, 1 per wheel) darker wheels mean denser wheels</li>
+        </ul>
+      </div>
+      <div name="minimapmarker" class="minimapmarker"></div>
+      <div name="healthbar" class="healthbar" onclick="cw_setCameraTarget(this.car_index)">
+        <div name="health" class="health"></div>
+        <div name="healthtext" class="healthtext"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="lib/jquery-1.10.1.min.js"></script>
+  <script src="lib/lodash.js"></script>
+  <script src="lib/seedrandom.js"></script>
+  <script src="lib/box2d.js"></script>
+  <script src="ghost.js"></script>
+  <script src="path.js"></script>
+  <script src="cawro.js"></script>
+  <script src="graphs.js"></script>
+</body>
 </html>
