@@ -32,7 +32,7 @@ var minimapcanvas = document.getElementById("minimap");
 var minimapctx = minimapcanvas.getContext("2d");
 var minimapscale = 3;
 
-var generationSize = 20;
+var generationSize = 10;
 var cw_carGeneration = new Array();
 var cw_carScores = new Array();
 var cw_topScores = new Array();
@@ -106,8 +106,7 @@ function debug(str, clear) {
 
 function showDistance(distance, height) {
   if( doDraw ) {
-    distanceMeter.innerHTML = distance+" meters<br />";
-    distanceMeter.innerHTML += height+" meters";
+    distanceMeter.innerHTML = distance;
   }
 }
 
@@ -659,7 +658,10 @@ function toggleDisplay() {
     doDraw = false;
     cw_stopSimulation();
     distanceMeter.innerHTML = "";
-    cw_runningInterval = setInterval(simulationStep, 0); // simulate 1000x per second when not drawing
+    cw_runningInterval = setInterval(function(){
+      var i = 0;
+      for(i=0;i<100;i++) simulationStep();
+    } , 1); // simulate 100 steps a time
   } else {
     doDraw = true;
     clearInterval(cw_runningInterval);
