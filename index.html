@@ -5,118 +5,34 @@
   <meta charset="utf-8" />
   <title>HTML5 Genetic Algorithm 2D 3-Wheelers - Chrome recommended</title>
   <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
-  <style>
-    body, input {
-      font-family: Helvetica, sans serif;
-    }
-    body {
-      background: #eee;
-    }
-    #mainbox {
-      width: 700px;
-      height: 400px;
-    }
-    #stats {
-      position: absolute;
-      top: 8px;    left: 8px;
-    }
-    #graphholder {
-      position: relative;
-    }
-    #graphholder .scale {
-      position: absolute;
-      left: 385px;
-    }
-    #s0   { top: 236px; }
-    #s25  { top: 187px; }
-    #s50  { top: 125px; }
-    #s75  { top:  62px; }
-    #s100 { top:   0px; }
-
-    .background_and_border {
-      border: 1px solid #999;
-      border-radius: 5px;
-      background: #fff;
-    }
-    #minimapholder {
-      position: relative;
-      border: 1px solid #999;
-      border-radius: 5px;
-      width: 700px;
-      height: 200px;
-      overflow: hidden;
-    }
-    .minimapmarker {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 1px;
-      height: 200px;
-      z-index: 5;
-      border-left: 1px solid #444;
-      font-size: 9px;
-      padding-left: 2px;
-    }
-    #minimapfog {
-      width: 798px;
-      height: 198px;
-      position: absolute;
-      top: 1px;
-      right: 1px;
-      z-index: 2;
-      background-color: white;
-    }
-    #minimapcamera {
-      position: absolute;
-      top: 0px;
-      left: 1px;
-      height: 199px;
-      width: 50px;
-      z-index: 3;
-      border: 1px dashed #888;
-    }
-    .healthbar {
-      cursor: pointer;
-      position: relative;
-      border: 1px solid #444;
-      width: 100px;
-      height: 15px;
-      padding: 2px;
-      margin-left: 23px;
-    }
-      .healthbar .health {
-        height: 100%;
-        width: 100%;
-        background-color: red;
-      }
-      .healthbar .healthtext {
-        position: absolute;
-        top: 0px;
-        left: -20px;
-      }
-
-    #cardef_loader {
-      width:900px;
-      height:110px;
-    }
-    .elitecolor {
-      color: rgb(68, 68, 204);
-    }
-    </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
+  <div id="vmroot" class="container">
     <div class="row">
       <div class="col-md-9">
-        <h2>
-          Genetic n-Wheelers <span class="small">by <a href="https://github.com/makr0/HTML5-Genetic-n-wheelers">makr0</a></span>
-        </h2>
+        <div class="row">
+          <div class="col-md-6">
+            <h2>
+              n-Wheelers <span class="small">by <a href="https://github.com/makr0/HTML5-Genetic-n-wheelers">makr0</a></span>
+            </h2>
+          </div>
+          <div class="col-md-6 text-right">
+            <h2>
+              <input type="button" class="btn btn-default btn-sm" value='-'
+                     v-on:click="zoomOut">
+
+              <input type="button" class="btn btn-default btn-sm" value='+'
+                     v-on:click="zoomIn">
+            </h2>
+          </div>
+
+        </div>
         <div style="position:relative;">
           <canvas id="mainbox" width="700" height="400" class="background_and_border"></canvas>
           <div id="stats" class="small">
-            <strong>Generations:</strong> <span id="generation"></span><br>
-            <strong>Cars alive:</strong>  <span id="population"></span><br>
-            <strong>Distance:</strong>  <span id="distancemeter">0</span> m
+            <strong>Generations:</strong> {{ gen_counter }}<br>
+            <strong>Cars alive:</strong>  {{ generationSize - deadCars }}
           </div>
         </div>
 
@@ -314,7 +230,7 @@
 
   </div>
 
-  <script src="lib/jquery-1.10.1.min.js"></script>
+  <script src="lib/vue.js"></script>
   <script src="lib/lodash.js"></script>
   <script src="lib/seedrandom.js"></script>
   <script src="lib/box2d.js"></script>

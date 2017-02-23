@@ -106,7 +106,7 @@ function ghost_draw_frame(ctx, ghost) {
   // wheel style
   ctx.fillStyle = "#eee";
   ctx.strokeStyle = "#aaa";
-  ctx.lineWidth = 1/zoom;
+  ctx.lineWidth = 1/vm.zoom;
 
   _.each(frame.wheels, function(wheel) {
     for (w in wheel)
@@ -116,7 +116,7 @@ function ghost_draw_frame(ctx, ghost) {
   // chassis style
   ctx.strokeStyle = "#fbb";
   ctx.fillStyle = "#fee";
-  ctx.lineWidth = 1/zoom;
+  ctx.lineWidth = 1/vm.zoom;
   ctx.beginPath();
   for (c in frame.chassis)
     ghost_draw_poly(ctx, frame.chassis[c].vtx, frame.chassis[c].num);

@@ -66,8 +66,11 @@ function cw_rotateFloorTile(coords, center, angle) {
 function cw_drawFloor() {
   ctx.strokeStyle = "#000";
   ctx.fillStyle = "#666";
-  ctx.lineWidth = 1/zoom;
+  ctx.lineWidth = 1/vm.zoom;
   ctx.beginPath();
+  var z = 1;
+  var clip_l = camera_x - (canvas.width * z);
+  var clip_r = camera_x + (canvas.width * z);
 
   outer_loop:
   for(var k = Math.max(0,last_drawn_tile-20); k < cw_floorTiles.length; k++) {
@@ -75,10 +78,10 @@ function cw_drawFloor() {
     for (f = b.GetFixtureList(); f; f = f.m_next) {
       var s = f.GetShape();
       var shapePosition = b.GetWorldPoint(s.m_vertices[0]).x;
-      if((shapePosition > (camera_x - 5)) && (shapePosition < (camera_x + 10))) {
+      if((shapePosition > clip_l) && (shapePosition < clip_r)) {
         cw_drawVirtualPoly(b, s.m_vertices, s.m_vertexCount);
       }
-      if(shapePosition > camera_x + 10) {
+      if(shapePosition > clip_r ) {
         last_drawn_tile = k;
         break outer_loop;
       }

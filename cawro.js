@@ -1,8 +1,25 @@
+// global vars moved to viewModel
+var vm = new Vue({
+  el: '#vmroot',
+  data: {
+    gen_counter: 0,
+    deadCars: 0,
+    generationSize: 10,
+    zoom: 40
+  },
+  methods: {
+    zoomIn: function() {
+      this.zoom = this.zoom * 1.4;
+    },
+    zoomOut: function() {
+      this.zoom = this.zoom / 1.4;
+    }
+  }
+});
+
 // Global Vars
 var ghost;
 var targetFPS = 60;
-var updateDom_every_n_frame = targetFPS/5;
-var needDom_update = updateDom_every_n_frame;
 var timeStep = 1.0 / targetFPS;
 
 var doDraw = true;
@@ -32,7 +49,6 @@ var minimapcanvas = document.getElementById("minimap");
 var minimapctx = minimapcanvas.getContext("2d");
 var minimapscale = 3;
 
-var generationSize = 10;
 var cw_carGeneration = new Array();
 var cw_carScores = new Array();
 var cw_topScores = new Array();
@@ -46,7 +62,6 @@ var cw_lambda = 0.5;
 var gen_parentality = 0.2;
 var gen_mutation = 0.05;
 var mutation_range = 1;
-var gen_counter = 0;
 var nWheels = 2;
 var nAttributes = 9 + 3 * nWheels; // change this when genome changes
 
@@ -55,8 +70,6 @@ var gravity = new b2Vec2(0.0, -9.81);
 var doSleep = true;
 
 var world;
-
-var zoom = 40;
 
 var mutable_floor = true;
 
@@ -96,19 +109,6 @@ leaderPosition.y = 0;
 
 minimapcamera.width = 12*minimapscale+"px";
 minimapcamera.height = 6*minimapscale+"px";
-
-function debug(str, clear) {
-  if(clear) {
-    debugbox.innerHTML = "";
-  }
-  debugbox.innerHTML += str+"<br />";
-}
-
-function showDistance(distance, height) {
-  if( doDraw ) {
-    distanceMeter.innerHTML = distance;
-  }
-}
 
 /* ========================================================================= */
 /* === Car ================================================================= */
@@ -321,25 +321,24 @@ function cw_createRandomCar() {
 /* ==== Generation ========================================================= */
 
 function cw_generationZero() {
-  for(var k = 0; k < generationSize; k++) {
+  for(var k = 0; k < vm.generationSize; k++) {
     var car_def = cw_createRandomCar();
     car_def.index = k;
     cw_carGeneration.push(car_def);
   }
-  gen_counter = 0;
-  cw_deadCars = 0;
+  vm.gen_counter = 0;
+  vm.deadCars = 0;
   leaderPosition = new Object();
   leaderPosition.x = 0;
   leaderPosition.y = 0;
   cw_materializeGeneration();
-  document.getElementById("generation").innerHTML = 0;
-  document.getElementById("population").innerHTML = generationSize;
+  vm.generation = 0;
   ghost = ghost_create_ghost();
 }
 
 function cw_materializeGeneration() {
   cw_carArray = new Array();
-  for(var k = 0; k < generationSize; k++) {
+  for(var k = 0; k < vm.generationSize; k++) {
     cw_carArray.push(new cw_Car(cw_carGeneration[k]));
   }
 }
@@ -348,14 +347,14 @@ function cw_nextGeneration() {
   var newGeneration = new Array();
   var newborn;
   cw_getChampions();
-  cw_topScores.push({i:gen_counter,v:cw_carScores[0].v,x:cw_carScores[0].x,y:cw_carScores[0].y,y2:cw_carScores[0].y2});
+  cw_topScores.push({i:vm.gen_counter,v:cw_carScores[0].v,x:cw_carScores[0].x,y:cw_carScores[0].y,y2:cw_carScores[0].y2});
   plot_graphs();
   for(var k = 0; k < gen_champions; k++) {
     cw_carScores[k].car_def.is_elite = true;
     cw_carScores[k].car_def.index = k;
     newGeneration.push(cw_carScores[k].car_def);
   }
-  for(k = gen_champions; k < generationSize; k++) {
+  for(k = gen_champions; k < vm.generationSize; k++) {
     var parent1 = cw_getParents();
     var parent2 = parent1;
     while(parent2 == parent1) {
@@ -370,21 +369,19 @@ function cw_nextGeneration() {
   }
   cw_carScores = new Array();
   cw_carGeneration = newGeneration;
-  gen_counter++;
+  vm.gen_counter++;
   cw_materializeGeneration();
-  cw_deadCars = 0;
+  vm.deadCars = 0;
   leaderPosition = new Object();
   leaderPosition.x = 0;
   leaderPosition.y = 0;
-  document.getElementById("generation").innerHTML = gen_counter;
   document.getElementById("cars").innerHTML = "";
-  document.getElementById("population").innerHTML = generationSize;
 }
 
 function cw_getChampions() {
   var ret = new Array();
   cw_carScores.sort(function(a,b) {if(a.v > b.v) {return -1} else {return 1}});
-  for(var k = 0; k < generationSize; k++) {
+  for(var k = 0; k < vm.generationSize; k++) {
     ret.push(cw_carScores[k].i);
   }
   return ret;
@@ -393,12 +390,12 @@ function cw_getChampions() {
 function cw_getParents() {
   if(breeding_option == 'random'){
     var r = Math.random();
-    return Math.floor(r * generationSize) % generationSize;
+    return Math.floor(r * vm.generationSize) % vm.generationSize;
   } else if(breeding_option == 'exp'){
    var r = Math.random();
    var x = Math.log(1-r)/(-1*cw_lambda);
-   if (x >= generationSize - 1)
-       return (generationSize -1);
+   if (x >= vm.generationSize - 1)
+       return (vm.generationSize -1);
    else
        return Math.floor(x);
   }
@@ -556,8 +553,9 @@ function cw_drawScreen() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.save();
   cw_setCameraPosition();
-  ctx.translate(200-(camera_x*zoom), 200+(camera_y*zoom));
-  ctx.scale(zoom, -zoom);
+  ctx.translate(200-(camera_x*vm.zoom), 200+(camera_y*vm.zoom));
+  ctx.scale(vm.zoom, -vm.zoom);
+
   cw_drawFloor();
   ghost_draw_frame(ctx, ghost);
   cw_drawCars();
@@ -591,11 +589,10 @@ function cw_drawGhostReplay() {
   camera_x = carPosition.x;
   camera_y = carPosition.y;
   cw_minimapCamera(camera_x, camera_y);
-  showDistance(Math.round(carPosition.x*100)/100, Math.round(carPosition.y*100)/100);
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.save();
-  ctx.translate(200-(carPosition.x*zoom), 200+(carPosition.y*zoom));
-  ctx.scale(zoom, -zoom);
+  ctx.translate(200-(carPosition.x*vm.zoom), 200+(carPosition.y*vm.zoom));
+  ctx.scale(vm.zoom, -vm.zoom);
   ghost_draw_frame(ctx, ghost);
   ghost_move_frame(ghost);
   cw_drawFloor();
@@ -611,13 +608,8 @@ function cw_drawCars() {
     }
     myCarPos = myCar.getPosition();
 
-    if(myCarPos.x < (camera_x - 5)) {
-      // too far behind, don't draw
-      continue;
-    }
-
     ctx.strokeStyle = "#444";
-    ctx.lineWidth = 1/zoom;
+    ctx.lineWidth = 1/vm.zoom;
 
     _.each(myCar.wheels,function(wheel){
       for (f = wheel.GetFixtureList(); f; f = f.m_next) {
@@ -736,8 +728,7 @@ function cw_drawMiniMap() {
 function simulationStep() {
   world.Step(1/box2dfps, 20, 20);
   ghost_move_frame(ghost);
-  needDom_update = needDom_update - 1;
-  for(var k = 0; k < generationSize; k++) {
+  for(var k = 0; k < vm.generationSize; k++) {
     if(!cw_carArray[k].alive) {
       continue;
     }
@@ -748,9 +739,8 @@ function simulationStep() {
     cw_carArray[k].healthBar.width = Math.round((cw_carArray[k].health/max_car_health)*100) + "%";
     if(cw_carArray[k].checkDeath()) {
       cw_carArray[k].kill();
-      cw_deadCars++;
-      document.getElementById("population").innerHTML = + (generationSize-cw_deadCars);
-      if(cw_deadCars >= generationSize) {
+      vm.deadCars++;
+      if(vm.deadCars >= vm.generationSize) {
         cw_newRound();
       }
       if(leaderPosition.leader == k) {
@@ -764,11 +754,6 @@ function simulationStep() {
       leaderPosition.leader = k;
     }
   }
-  if( needDom_update == 0 && doDraw) {
-    showDistance(Math.round(leaderPosition.x*100)/100, Math.round(leaderPosition.y*100)/100);
-  }
-  if( needDom_update == 0) needDom_update = updateDom_every_n_frame;
-
 }
 
 function cw_findLeader() {
@@ -828,7 +813,7 @@ function cw_kill() {
   cw_carScores.push({ i:current_car_index, v:score, s: avgspeed, x:position, y:myCar.maxPositiony, y2:myCar.minPositiony });
   current_car_index++;
   cw_killCar();
-  if(current_car_index >= generationSize) {
+  if(current_car_index >= vm.generationSize) {
     cw_nextGeneration();
     current_car_index = 0;
   }
@@ -932,7 +917,7 @@ function cw_init() {
   var mmm  = document.getElementsByName('minimapmarker')[0];
   var hbar = document.getElementsByName('healthbar')[0];
 
-  for(var k = 0; k < generationSize; k++) {
+  for(var k = 0; k < vm.generationSize; k++) {
 
     // minimap markers
     var newbar = mmm.cloneNode(true);
