@@ -1,0 +1,96 @@
+    body, input {
+      font-family: Helvetica, sans serif;
+    }
+    body {
+      background: #eee;
+    }
+    #mainbox {
+      width: 700px;
+      height: 400px;
+    }
+    #stats {
+      position: absolute;
+      top: 8px;    left: 8px;
+    }
+    #graphholder {
+      position: relative;
+    }
+    #graphholder .scale {
+      position: absolute;
+      left: 385px;
+    }
+    #s0   { top: 236px; }
+    #s25  { top: 187px; }
+    #s50  { top: 125px; }
+    #s75  { top:  62px; }
+    #s100 { top:   0px; }
+
+    .background_and_border {
+      border: 1px solid #999;
+      border-radius: 5px;
+      background: #fff;
+    }
+    #minimapholder {
+      position: relative;
+      border: 1px solid #999;
+      border-radius: 5px;
+      width: 700px;
+      height: 200px;
+      overflow: hidden;
+    }
+    .minimapmarker {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1px;
+      height: 200px;
+      z-index: 5;
+      border-left: 1px solid #444;
+      font-size: 9px;
+      padding-left: 2px;
+    }
+    #minimapfog {
+      width: 798px;
+      height: 198px;
+      position: absolute;
+      top: 1px;
+      right: 1px;
+      z-index: 2;
+      background-color: white;
+    }
+    #minimapcamera {
+      position: absolute;
+      top: 0px;
+      left: 1px;
+      height: 199px;
+      width: 50px;
+      z-index: 3;
+      border: 1px dashed #888;
+    }
+    .healthbar {
+      cursor: pointer;
+      position: relative;
+      border: 1px solid #444;
+      width: 100px;
+      height: 15px;
+      padding: 2px;
+      margin-left: 23px;
+    }
+      .healthbar .health {
+        height: 100%;
+        width: 100%;
+        background-color: red;
+      }
+      .healthbar .healthtext {
+        position: absolute;
+        top: 0px;
+        left: -20px;
+      }
+
+    #cardef_loader {
+      width:900px;
+      height:110px;
+    }
+    .elitecolor {
+      color: rgb(68, 68, 204);
+    }
