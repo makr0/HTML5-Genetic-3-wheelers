@@ -5,7 +5,9 @@ var vm = new Vue({
     gen_counter: 0,
     deadCars: 0,
     generationSize: 10,
-    zoom: 40
+    zoom: 40,
+    doDraw: true,
+    paused: false
   },
   methods: {
     zoomIn: function() {
@@ -14,16 +16,32 @@ var vm = new Vue({
     zoomOut: function() {
       this.zoom = this.zoom / 1.4;
     }
+  },
+  watch: {
+    doDraw: function(val) {
+      if(this.paused) return;
+      if(!val) {
+        cameraspeed = 1;
+        cw_stopSimulation();
+        cw_runningInterval = setInterval(function(){
+          var i = 0;
+          for(i=0;i<1000;i++) simulationStep();
+        } , 1); // simulate 100 steps a time
+        cw_drawInterval = setInterval(cw_drawScreen, 900);
+      } else {
+        clearInterval(cw_runningInterval);
+        clearInterval(cw_drawInterval);
+        cw_startSimulation();
+      }
+    }
   }
+
 });
 
 // Global Vars
 var ghost;
 var targetFPS = 60;
 var timeStep = 1.0 / targetFPS;
-
-var doDraw = true;
-var cw_paused = false;
 
 var box2dfps = targetFPS;
 var screenfps = targetFPS/2;
@@ -641,25 +659,6 @@ function cw_drawCars() {
   }
 }
 
-function toggleDisplay() {
-  if(cw_paused) {
-    return;
-  }
-  canvas.width = canvas.width;
-  if(doDraw) {
-    doDraw = false;
-    cw_stopSimulation();
-    distanceMeter.innerHTML = "";
-    cw_runningInterval = setInterval(function(){
-      var i = 0;
-      for(i=0;i<100;i++) simulationStep();
-    } , 1); // simulate 100 steps a time
-  } else {
-    doDraw = true;
-    clearInterval(cw_runningInterval);
-    cw_startSimulation();
-  }
-}
 
 function cw_drawVirtualPoly(body, vtx, n_vtx) {
   // set strokestyle and fillstyle before call
@@ -842,7 +841,7 @@ function cw_resetPopulation() {
 }
 
 function cw_resetWorld() {
-  doDraw = true;
+  vm.doDraw = true;
   cw_stopSimulation();
   for (b = world.m_bodyList; b; b = b.m_next) {
     world.DestroyBody(b);
@@ -867,7 +866,7 @@ function cw_confirmResetWorld() {
 // ghost replay stuff
 
 function cw_pauseSimulation() {
-  cw_paused = true;
+  vm.paused = true;
   clearInterval(cw_runningInterval);
   clearInterval(cw_drawInterval);
   old_last_drawn_tile = last_drawn_tile;
@@ -876,7 +875,7 @@ function cw_pauseSimulation() {
 }
 
 function cw_resumeSimulation() {
-  cw_paused = false;
+  vm.paused = false;
   ghost_resume(ghost);
   last_drawn_tile = old_last_drawn_tile;
   cw_runningInterval = setInterval(simulationStep, Math.round(1000/box2dfps));
@@ -884,7 +883,7 @@ function cw_resumeSimulation() {
 }
 
 function cw_startGhostReplay() {
-  if(!doDraw) {
+  if(!vm.doDraw) {
     toggleDisplay();
   }
   cw_pauseSimulation();

@@ -20,10 +20,10 @@
           <div class="col-md-6 text-right">
             <h2>
               <input type="button" class="btn btn-default btn-sm" value='-'
-                     v-on:click="zoomOut">
+                     @click="zoomOut">
 
               <input type="button" class="btn btn-default btn-sm" value='+'
-                     v-on:click="zoomIn">
+                     @click="zoomIn">
             </h2>
           </div>
 
@@ -64,7 +64,8 @@
 
         <h3>Controls</h3>
 
-        <input type="button" class="btn btn-default btn-sm" value="Speed up! (hide cars)"      id="toggledisplay" onclick="toggleDisplay()" />
+        <input type="button" class="btn btn-default btn-sm"
+               value="Speed up! (hide cars)" @click="doDraw = !doDraw" />
         <input type="button" class="btn btn-default btn-sm" value="New Population" onclick="cw_resetPopulation()" />
         <br /><br />
         <div>
