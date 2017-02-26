@@ -7,7 +7,9 @@ var vm = new Vue({
     generationSize: 10,
     zoom: 40,
     doDraw: true,
-    paused: false
+    paused: false,
+    topScores: new Array(),
+    top10Scores: new Array()
   },
   methods: {
     zoomIn: function() {
@@ -27,7 +29,7 @@ var vm = new Vue({
           var i = 0;
           for(i=0;i<1000;i++) simulationStep();
         } , 1); // simulate 100 steps a time
-        cw_drawInterval = setInterval(cw_drawScreen, 900);
+        cw_drawInterval = setInterval(cw_drawScreen, 2000);
       } else {
         clearInterval(cw_runningInterval);
         clearInterval(cw_drawInterval);
@@ -50,7 +52,8 @@ var debugbox = document.getElementById("debug");
 
 var canvas = document.getElementById("mainbox");
 var ctx = canvas.getContext("2d");
-
+var leadercanvas_el = document.getElementById("leadercanvas");
+var leadercanvas  = leadercanvas_el.getContext("2d");
 
 var cameraspeed = 0.5;
 var camera_y = 0;
@@ -67,9 +70,8 @@ var minimapcanvas = document.getElementById("minimap");
 var minimapctx = minimapcanvas.getContext("2d");
 var minimapscale = 3;
 
-var cw_carGeneration = new Array();
+var cw_carArray = new Array();
 var cw_carScores = new Array();
-var cw_topScores = new Array();
 var cw_graphTop = new Array();
 var cw_graphElite = new Array();
 var cw_graphAverage = new Array();
@@ -121,256 +123,40 @@ var cw_ghostReplayInterval = null;
 
 var distanceMeter = document.getElementById("distancemeter");
 
-var leaderPosition = new Object();
-leaderPosition.x = 0;
-leaderPosition.y = 0;
+var leader;
 
 minimapcamera.width = 12*minimapscale+"px";
 minimapcamera.height = 6*minimapscale+"px";
 
-/* ========================================================================= */
-/* === Car ================================================================= */
-var cw_Car = function() {
-  this.__constructor.apply(this, arguments);
-}
-
-cw_Car.prototype.chassis = null;
-cw_Car.prototype.wheels = new Array();
-
-cw_Car.prototype.__constructor = function(car_def) {
-  this.velocityIndex = 0;
-  this.health = max_car_health;
-  this.maxPosition = 0;
-  this.maxPositiony = 0;
-  this.minPositiony = 0;
-  this.frames = 0;
-  this.car_def = car_def
-  this.alive = true;
-  this.is_elite = car_def.is_elite;
-  this.healthBar = document.getElementById("health"+car_def.index).style;
-  this.healthBarText = document.getElementById("health"+car_def.index).nextSibling.nextSibling;
-  this.healthBarText.innerHTML = car_def.index;
-  this.minimapmarker = document.getElementById("bar"+car_def.index).style;
-
-  if(this.is_elite) {
-    this.healthBar.backgroundColor = "#44c";
-    document.getElementById("bar"+car_def.index).style.borderLeft = "1px solid #44c";
-    document.getElementById("bar"+car_def.index).innerHTML = car_def.index;
-  } else {
-    this.healthBar.backgroundColor = "#c44";
-    document.getElementById("bar"+car_def.index).style.borderLeft = "1px solid #c44";
-    document.getElementById("bar"+car_def.index).innerHTML = car_def.index;
-  }
-
-  this.chassis = cw_createChassis(car_def.vertex_list, car_def.chassis_density);
-  this.wheels = new Array();
-  var that = this;
-  var joint_def = new b2RevoluteJointDef();
-  var carmass = this.chassis.GetMass();
-  _.map(car_def.wheels,function(wheel_def){
-    var wheel = cw_createWheel(wheel_def.radius, wheel_def.density);
-    that.wheels.push( wheel );
-    carmass += wheel.GetMass();
-  });
-
-  _.map(car_def.wheels,function(wheel_def, wheel_index){
-    var torque = carmass * -gravity.y / wheel_def.radius;
-    var wheelvertex = that.chassis.vertex_list[wheel_def.vertex];
-    joint_def.localAnchorA.Set(wheelvertex.x, wheelvertex.y);
-    joint_def.localAnchorB.Set(0, 0);
-    joint_def.maxMotorTorque = torque;
-    joint_def.motorSpeed = -motorSpeed;
-    joint_def.enableMotor = true;
-    joint_def.bodyA = that.chassis;
-    joint_def.bodyB = that.wheels[wheel_index];
-    world.CreateJoint(joint_def);
-  });
-
-  this.replay = ghost_create_replay();
-  ghost_add_replay_frame(this.replay, this);
-}
-
-cw_Car.prototype.getPosition = function() {
-  return this.chassis.GetPosition();
-}
-
-cw_Car.prototype.kill = function() {
-  var avgspeed = (this.maxPosition / this.frames) * box2dfps;
-  var position = this.maxPosition;
-  var score = position + avgspeed;
-  ghost_compare_to_replay(this.replay, ghost, score);
-  cw_carScores.push({ car_def:this.car_def, v:score, s: avgspeed, x:position, y:this.maxPositiony, y2:this.minPositiony });
-  world.DestroyBody(this.chassis);
-  _.map(this.wheels,_.bind(world.DestroyBody,world));
-  this.alive = false;
-}
-
-cw_Car.prototype.checkDeath = function() {
-  // check health
-  var position = this.getPosition();
-  if(position.y > this.maxPositiony) {
-    this.maxPositiony = position.y;
-  }
-  if(position .y < this.minPositiony) {
-    this.minPositiony = position.y;
-  }
-
-  if(position.x > this.maxPosition + 0.02 && position.y > -300 ) {
-    this.health = max_car_health;
-    this.maxPosition = position.x;
-  } else {
-    if(position.x > this.maxPosition) {
-      this.maxPosition = position.x;
-    }
-    if(Math.abs(this.chassis.GetLinearVelocity().x) < deathSpeed) {
-      this.health -= 5;
-    }
-    this.health--;
-    if(position .y < -300) this.health = 0; // fell off the track
-    if(this.health <= 0) {
-      this.healthBarText.innerHTML = "&#8708;";
-      this.healthBar.width = "0";
-      return true;
-    }
-  }
-}
-
-function cw_createChassisPart(body, vertex1, vertex2, density) {
-  var vertex_list = new Array();
-  vertex_list.push(vertex1);
-  vertex_list.push(vertex2);
-  vertex_list.push(b2Vec2.Make(0,0));
-  var fix_def = new b2FixtureDef();
-  fix_def.shape = new b2PolygonShape();
-  fix_def.density = density;
-  fix_def.friction = 10;
-  fix_def.restitution = 0.2;
-  fix_def.filter.groupIndex = -1;
-  fix_def.shape.SetAsArray(vertex_list,3);
-
-  body.CreateFixture(fix_def);
-}
-
-function cw_createChassis(vertex_list, density) {
-  var body_def = new b2BodyDef();
-  body_def.type = b2Body.b2_dynamicBody;
-  body_def.position.Set(0.0, 4.0);
-
-  var body = world.CreateBody(body_def);
-
-  cw_createChassisPart(body, vertex_list[0],vertex_list[1], density);
-  cw_createChassisPart(body, vertex_list[1],vertex_list[2], density);
-  cw_createChassisPart(body, vertex_list[2],vertex_list[3], density);
-  cw_createChassisPart(body, vertex_list[3],vertex_list[4], density);
-  cw_createChassisPart(body, vertex_list[4],vertex_list[5], density);
-  cw_createChassisPart(body, vertex_list[5],vertex_list[6], density);
-  cw_createChassisPart(body, vertex_list[6],vertex_list[7], density);
-  cw_createChassisPart(body, vertex_list[7],vertex_list[0], density);
-
-  body.vertex_list = vertex_list;
-
-  return body;
-}
-
-function cw_createWheel(radius, density) {
-  var body_def = new b2BodyDef();
-  body_def.type = b2Body.b2_dynamicBody;
-  body_def.position.Set(0, 0);
-
-  var body = world.CreateBody(body_def);
-
-  var fix_def = new b2FixtureDef();
-  fix_def.shape = new b2CircleShape(radius);
-  fix_def.density = density;
-  fix_def.friction = 1;
-  fix_def.restitution = 0.2;
-  fix_def.filter.groupIndex = -1;
-
-  body.CreateFixture(fix_def);
-  return body;
-}
-
-function cw_createRandomCar() {
-  var v2;
-  var car_def = new Object();
-
-  // make car chassis
-  car_def.chassis_density = Math.random()*chassisMaxDensity+chassisMinDensity
-
-  car_def.vertex_list = new Array();
-  car_def.vertex_list.push(new b2Vec2(Math.random().toFixed(4)*chassisMaxAxis + chassisMinAxis,0));
-  car_def.vertex_list.push(new b2Vec2(Math.random().toFixed(4)*chassisMaxAxis + chassisMinAxis,Math.random().toFixed(4)*chassisMaxAxis + chassisMinAxis));
-  car_def.vertex_list.push(new b2Vec2(0,Math.random().toFixed(4)*chassisMaxAxis + chassisMinAxis));
-  car_def.vertex_list.push(new b2Vec2(-Math.random().toFixed(4)*chassisMaxAxis - chassisMinAxis,Math.random().toFixed(4)*chassisMaxAxis + chassisMinAxis));
-  car_def.vertex_list.push(new b2Vec2(-Math.random().toFixed(4)*chassisMaxAxis - chassisMinAxis,0));
-  car_def.vertex_list.push(new b2Vec2(-Math.random().toFixed(4)*chassisMaxAxis - chassisMinAxis,-Math.random().toFixed(4)*chassisMaxAxis - chassisMinAxis));
-  car_def.vertex_list.push(new b2Vec2(0,-Math.random().toFixed(4)*chassisMaxAxis - chassisMinAxis));
-  car_def.vertex_list.push(new b2Vec2(Math.random().toFixed(4)*chassisMaxAxis + chassisMinAxis,-Math.random().toFixed(4)*chassisMaxAxis - chassisMinAxis));
-
-  // make the wheels
-  car_def.wheels = _.map( _.range(nWheels),
-    function() {
-      return {
-        radius:  Math.random().toFixed(4) * wheelMaxRadius  + wheelMinRadius,
-        density: Math.random().toFixed(4) * wheelMaxDensity + wheelMinDensity
-      };
-    }
-  );
-
-  // decide which wheel goes on which vertex
-  // pick random vertex-indizes
-  var wheel_vertices = _.sampleSize(_.range(car_def.vertex_list.length), car_def.wheels.length);
-  // put each picked vertex on a wheel
-  _.map( car_def.wheels, function( wheel, index ) {
-    wheel.vertex = wheel_vertices[ index ];
-  });
-
-  // console.log(car_def);
-  //console.log(JSON.stringify(car_def));
-
-  return car_def;
-}
-
-/* === END Car ============================================================= */
-/* ========================================================================= */
 
 
 /* ========================================================================= */
 /* ==== Generation ========================================================= */
 
 function cw_generationZero() {
+  var car;
   for(var k = 0; k < vm.generationSize; k++) {
-    var car_def = cw_createRandomCar();
-    car_def.index = k;
-    cw_carGeneration.push(car_def);
+    car = new Car();
+    car.randomize(k);
+    cw_carArray.push(car);
   }
   vm.gen_counter = 0;
   vm.deadCars = 0;
-  leaderPosition = new Object();
-  leaderPosition.x = 0;
-  leaderPosition.y = 0;
-  cw_materializeGeneration();
   vm.generation = 0;
+  leader = cw_carArray[0];
   ghost = ghost_create_ghost();
-}
-
-function cw_materializeGeneration() {
-  cw_carArray = new Array();
-  for(var k = 0; k < vm.generationSize; k++) {
-    cw_carArray.push(new cw_Car(cw_carGeneration[k]));
-  }
 }
 
 function cw_nextGeneration() {
   var newGeneration = new Array();
   var newborn;
-  cw_getChampions();
-  cw_topScores.push({i:vm.gen_counter,v:cw_carScores[0].v,x:cw_carScores[0].x,y:cw_carScores[0].y,y2:cw_carScores[0].y2});
+  cw_carScores = _.reverse(_.sortBy(cw_carScores, function(a){ return a.v; }));
+  vm.topScores.push(_.extend({gen:vm.gen_counter}, cw_carScores[0]));
   plot_graphs();
   for(var k = 0; k < gen_champions; k++) {
     cw_carScores[k].car_def.is_elite = true;
     cw_carScores[k].car_def.index = k;
-    newGeneration.push(cw_carScores[k].car_def);
+    newGeneration.push(new Car(cw_carScores[k].car_def));
   }
   for(k = gen_champions; k < vm.generationSize; k++) {
     var parent1 = cw_getParents();
@@ -383,26 +169,15 @@ function cw_nextGeneration() {
     newborn = cw_mutate(newborn);
     newborn.is_elite = false;
     newborn.index = k;
-    newGeneration.push(newborn);
+    newGeneration.push(new Car(newborn));
   }
   cw_carScores = new Array();
-  cw_carGeneration = newGeneration;
+  cw_carArray = newGeneration;
   vm.gen_counter++;
-  cw_materializeGeneration();
   vm.deadCars = 0;
-  leaderPosition = new Object();
-  leaderPosition.x = 0;
-  leaderPosition.y = 0;
+  leader = cw_carArray[0];
+  vm.top10Scores = _.slice(vm.topScores,0,10);
   document.getElementById("cars").innerHTML = "";
-}
-
-function cw_getChampions() {
-  var ret = new Array();
-  cw_carScores.sort(function(a,b) {if(a.v > b.v) {return -1} else {return 1}});
-  for(var k = 0; k < vm.generationSize; k++) {
-    ret.push(cw_carScores[k].i);
-  }
-  return ret;
 }
 
 function cw_getParents() {
@@ -578,6 +353,17 @@ function cw_drawScreen() {
   ghost_draw_frame(ctx, ghost);
   cw_drawCars();
   ctx.restore();
+  drawLeader();
+}
+
+function drawLeader() {
+  leadercanvas.clearRect(0,0,leadercanvas_el.width,leadercanvas_el.height);
+  leadercanvas.save();
+  var cam = leader.getPosition();
+  leadercanvas.translate(100-(cam.x*vm.zoom), 100+(cam.y*vm.zoom));
+  leadercanvas.scale(vm.zoom, -vm.zoom);
+  leader.drawOnCanvas( leadercanvas );
+  leadercanvas.restore();
 }
 
 function cw_minimapCamera(x, y) {
@@ -593,7 +379,7 @@ function cw_setCameraPosition() {
   if(camera_target >= 0) {
     var cameraTargetPosition = cw_carArray[camera_target].getPosition();
   } else {
-    var cameraTargetPosition = leaderPosition;
+    var cameraTargetPosition = leader.getPosition();
   }
   var diff_y = camera_y - cameraTargetPosition.y;
   var diff_x = camera_x - cameraTargetPosition.x;
@@ -619,88 +405,54 @@ function cw_drawGhostReplay() {
 
 
 function cw_drawCars() {
-  for(var k = (cw_carArray.length-1); k >= 0; k--) {
-    myCar = cw_carArray[k];
-    if(!myCar.alive) {
-      continue;
-    }
-    myCarPos = myCar.getPosition();
-
-    ctx.strokeStyle = "#444";
-    ctx.lineWidth = 1/vm.zoom;
-
-    _.each(myCar.wheels,function(wheel){
-      for (f = wheel.GetFixtureList(); f; f = f.m_next) {
-        var s = f.GetShape();
-        var color = Math.round(255 - (255 * (f.m_density - wheelMinDensity)) / wheelMaxDensity).toString();
-        var rgbcolor = "rgb("+color+","+color+","+color+")";
-        cw_drawCircle(wheel, s.m_p, s.m_radius, wheel.m_sweep.a, rgbcolor);
-      }
-    });
-
-    var densitycolor = Math.round(100 - (70 * ((myCar.car_def.chassis_density - chassisMinDensity) / chassisMaxDensity))).toString() + "%";
-    if(myCar.is_elite) {
-      ctx.strokeStyle = "#44c";
-      //ctx.fillStyle = "#ddf";
-      ctx.fillStyle = "hsl(240,50%,"+densitycolor+")";
-    } else {
-      ctx.strokeStyle = "#c44";
-      //ctx.fillStyle = "#fdd";
-      ctx.fillStyle = "hsl(0,50%,"+densitycolor+")";
-    }
-    ctx.beginPath();
-    var b = myCar.chassis;
-    for (f = b.GetFixtureList(); f; f = f.m_next) {
-      var s = f.GetShape();
-      cw_drawVirtualPoly(b, s.m_vertices, s.m_vertexCount);
-    }
-    ctx.fill();
-    ctx.stroke();
-  }
+  _(cw_carArray)
+   .filter(function(car) {return car.alive;})
+   .map(function(car) { car.drawOnCanvas( ctx ) } )
+   .commit();
 }
 
 
-function cw_drawVirtualPoly(body, vtx, n_vtx) {
+function cw_drawVirtualPoly(body, vtx, n_vtx, canvas) {
   // set strokestyle and fillstyle before call
   // call beginPath before call
 
   var p0 = body.GetWorldPoint(vtx[0]);
-  ctx.moveTo(p0.x, p0.y);
+  canvas.moveTo(p0.x, p0.y);
   for (var i = 1; i < n_vtx; i++) {
     p = body.GetWorldPoint(vtx[i]);
-    ctx.lineTo(p.x, p.y);
+    canvas.lineTo(p.x, p.y);
   }
-  ctx.lineTo(p0.x, p0.y);
+  canvas.lineTo(p0.x, p0.y);
 }
 
-function cw_drawPoly(body, vtx, n_vtx) {
+function cw_drawPoly(body, vtx, n_vtx, canvas) {
   // set strokestyle and fillstyle before call
-  ctx.beginPath();
+  canvas.beginPath();
 
   var p0 = body.GetWorldPoint(vtx[0]);
-  ctx.moveTo(p0.x, p0.y);
+  canvas.moveTo(p0.x, p0.y);
   for (var i = 1; i < n_vtx; i++) {
     p = body.GetWorldPoint(vtx[i]);
-    ctx.lineTo(p.x, p.y);
+    canvas.lineTo(p.x, p.y);
   }
-  ctx.lineTo(p0.x, p0.y);
+  canvas.lineTo(p0.x, p0.y);
 
-  ctx.fill();
-  ctx.stroke();
+  canvas.fill();
+  canvas.stroke();
 }
 
-function cw_drawCircle(body, center, radius, angle, color) {
+function cw_drawCircle(body, center, radius, angle, color, canvas) {
   var p = body.GetWorldPoint(center);
-  ctx.fillStyle = color;
+  canvas.fillStyle = color;
 
-  ctx.beginPath();
-  ctx.arc(p.x, p.y, radius, 0, 2*Math.PI, true);
+  canvas.beginPath();
+  canvas.arc(p.x, p.y, radius, 0, 2*Math.PI, true);
 
-  ctx.moveTo(p.x, p.y);
-  ctx.lineTo(p.x + radius*Math.cos(angle), p.y + radius*Math.sin(angle));
+//  canvas.moveTo(p.x, p.y);
+//  canvas.lineTo(p.x + radius*Math.cos(angle), p.y + radius*Math.sin(angle));
 
-  ctx.fill();
-  ctx.stroke();
+  canvas.fill();
+  canvas.stroke();
 }
 
 function cw_drawMiniMap() {
@@ -742,31 +494,29 @@ function simulationStep() {
       if(vm.deadCars >= vm.generationSize) {
         cw_newRound();
       }
-      if(leaderPosition.leader == k) {
+      if(leader == cw_carArray[k] ) {
+        console.log('leader was killed');
         // leader is dead, find new leader
-        cw_findLeader();
+        leader = cw_findLeader();
       }
       continue;
     }
-    if(position.x > leaderPosition.x) {
-      leaderPosition = position;
-      leaderPosition.leader = k;
+    // current car is faster than leader, make it the new leader
+    if(position.x > leader.getPosition().x) {
+      leader = cw_carArray[k];
     }
   }
 }
 
 function cw_findLeader() {
-  var lead = 0;
-  for(var k = 0; k < cw_carArray.length; k++) {
-    if(!cw_carArray[k].alive) {
-      continue;
-    }
-    position = cw_carArray[k].getPosition();
-    if(position.x > lead) {
-      leaderPosition = position;
-      leaderPosition.leader = k;
-    }
-  }
+  var aliveCars = _.filter(cw_carArray, function(car) {return car.alive;});
+
+  return _(aliveCars)
+   .reduce(function(max, car) {
+      if( max === 0 ) return car;
+      if( car.getPosition().x > max.getPosition().x )  return car;
+      return max;
+   },aliveCars[0]);
 }
 
 function cw_newRound() {
@@ -803,32 +553,13 @@ function cw_stopSimulation() {
   clearInterval(cw_drawInterval);
 }
 
-function cw_kill() {
-  var avgspeed = (myCar.maxPosition / myCar.frames) * box2dfps;
-  var position = myCar.maxPosition;
-  var score = position + avgspeed;
-  document.getElementById("cars").innerHTML += Math.round(position*100)/100 + "m + " +" "+Math.round(avgspeed*100)/100+" m/s = "+ Math.round(score*100)/100 +"pts<br />";
-  ghost_compare_to_replay(replay, ghost, score);
-  cw_carScores.push({ i:current_car_index, v:score, s: avgspeed, x:position, y:myCar.maxPositiony, y2:myCar.minPositiony });
-  current_car_index++;
-  cw_killCar();
-  if(current_car_index >= vm.generationSize) {
-    cw_nextGeneration();
-    current_car_index = 0;
-  }
-  myCar = cw_createNextCar();
-  last_drawn_tile = 0;
-}
-
 function cw_resetPopulation() {
   document.getElementById("generation").innerHTML = "";
   document.getElementById("cars").innerHTML = "";
-  document.getElementById("topscores").innerHTML = "";
   cw_clearGraphics();
   cw_carArray = new Array();
-  cw_carGeneration = new Array();
   cw_carScores = new Array();
-  cw_topScores = new Array();
+  vm.topScores = new Array();
   cw_graphTop = new Array();
   cw_graphElite = new Array();
   cw_graphAverage = new Array();
@@ -893,9 +624,8 @@ function cw_startGhostReplay() {
 function cw_stopGhostReplay() {
   clearInterval(cw_ghostReplayInterval);
   cw_ghostReplayInterval = null;
-  cw_findLeader();
-  camera_x = leaderPosition.x;
-  camera_y = leaderPosition.y;
+  leader = cw_findLeader();
+  cw_setCameraPosition();
   cw_resumeSimulation();
 }
 

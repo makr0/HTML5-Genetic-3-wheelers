@@ -50,7 +50,15 @@
           <div class="col-sm-5">
             <div id="topscoreholder" class="small">
               <input type="button" class="btn btn-default btn-sm" value="View top replay" onclick="cw_toggleGhostReplay(this)" /><br />
-              <div id="topscores"></div>
+              <table>
+              <tr><th>#</th><th>score</th><th>x</th><th>gen</th></tr>
+              <tr v-for="(score, index) in top10Scores">
+                <td>{{ index }}</td>
+                <td>{{ Math.round(score.s) }}</td>
+                <td>{{ Math.round(score.x) }}</td>
+                <td>{{ score.gen }}</td>
+              </li>
+              </table>
             </div>
           </div>
         </div>
@@ -174,6 +182,7 @@
         <br />
         <input type="button" class="btn btn-default btn-sm"
                value="Watch Leader" onclick="cw_setCameraTarget(-1)" />
+        <canvas id="leadercanvas" width="200" height="200" class="background_and_border"></canvas>
         <div id="health"></div>
         <div id="cars"></div>
       </div>
@@ -237,7 +246,8 @@
   <script src="lib/box2d.js"></script>
   <script src="ghost.js"></script>
   <script src="path.js"></script>
-  <script src="cawro.js"></script>
   <script src="graphs.js"></script>
+  <script src="car.js"></script>
+  <script src="main.js"></script>
 </body>
 </html>

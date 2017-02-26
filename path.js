@@ -79,7 +79,7 @@ function cw_drawFloor() {
       var s = f.GetShape();
       var shapePosition = b.GetWorldPoint(s.m_vertices[0]).x;
       if((shapePosition > clip_l) && (shapePosition < clip_r)) {
-        cw_drawVirtualPoly(b, s.m_vertices, s.m_vertexCount);
+        cw_drawVirtualPoly(b, s.m_vertices, s.m_vertexCount, ctx);
       }
       if(shapePosition > clip_r ) {
         last_drawn_tile = k;
