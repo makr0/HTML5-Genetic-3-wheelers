@@ -150,8 +150,9 @@ function cw_generationZero() {
 function cw_nextGeneration() {
   var newGeneration = new Array();
   var newborn;
-  cw_carScores = _.reverse(_.sortBy(cw_carScores, function(a){ return a.v; }));
+  cw_carScores = _.reverse(_.sortBy(cw_carScores, function(a){ return a.s; }));
   vm.topScores.push(_.extend({gen:vm.gen_counter}, cw_carScores[0]));
+  vm.topScores = _.reverse(_.sortBy(vm.topScores, function(a){ return a.s; }));
   plot_graphs();
   for(var k = 0; k < gen_champions; k++) {
     cw_carScores[k].car_def.is_elite = true;
