@@ -1,7 +1,16 @@
-function cw_storeGraphScores() {
-  cw_graphAverage.push(cw_average(cw_carScores));
-  cw_graphElite.push(cw_eliteaverage(cw_carScores));
-  cw_graphTop.push(cw_carScores[0].v);
+var cw_graphTop = new Array();
+var cw_graphElite = new Array();
+var cw_graphAverage = new Array();
+var cw_generationSize = 10;
+var graphcanvas = document.getElementById("graphcanvas");
+var graphctx = graphcanvas.getContext("2d");
+var graphheight = 250;
+var graphwidth = 400;
+
+function cw_storeGraphScores(scores) {
+  cw_graphAverage.push(cw_average(scores));
+  cw_graphElite.push(cw_eliteaverage(scores));
+  cw_graphTop.push(scores[0].v);
 }
 
 function cw_plotTop() {
@@ -37,8 +46,8 @@ function cw_plotAverage() {
   graphctx.stroke();
 }
 
-function plot_graphs() {
-  cw_storeGraphScores();
+function plot_graphs(scores) {
+  cw_storeGraphScores(scores);
   cw_clearGraphics();
   cw_plotAverage();
   cw_plotElite();
@@ -48,18 +57,18 @@ function plot_graphs() {
 
 function cw_eliteaverage(scores) {
   var sum = 0;
-  for(var k = 0; k < Math.floor(vm.generationSize/2); k++) {
+  for(var k = 0; k < Math.floor(cw_generationSize/2); k++) {
     sum += scores[k].s;
   }
-  return sum/Math.floor(vm.generationSize/2);
+  return sum/Math.floor(cw_generationSize/2);
 }
 
 function cw_average(scores) {
   var sum = 0;
-  for(var k = 0; k < vm.generationSize; k++) {
+  for(var k = 0; k < cw_generationSize; k++) {
     sum += scores[k].s;
   }
-  return sum/vm.generationSize;
+  return sum/cw_generationSize;
 }
 
 function cw_clearGraphics() {

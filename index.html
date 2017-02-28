@@ -6,6 +6,8 @@
   <title>HTML5 Genetic Algorithm 2D 3-Wheelers - Chrome recommended</title>
   <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
   <link rel="stylesheet" href="style.css">
+  <script src="lib/box2d.js"></script>
+  <script src="lib/seedrandom.js"></script>
 </head>
 <body>
   <div id="vmroot" class="container">
@@ -49,7 +51,6 @@
           </div>
           <div class="col-sm-5">
             <div id="topscoreholder" class="small">
-              <input type="button" class="btn btn-default btn-sm" value="View top replay" onclick="cw_toggleGhostReplay(this)" /><br />
               <table>
               <tr><th>#</th><th>score</th><th>x</th><th>gen</th></tr>
               <tr v-for="(score, index) in top10Scores">
@@ -74,7 +75,7 @@
 
         <input type="button" class="btn btn-default btn-sm"
                value="Speed up! (hide cars)" @click="doDraw = !doDraw" />
-        <input type="button" class="btn btn-default btn-sm" value="New Population" onclick="cw_resetPopulation()" />
+        <input type="button" class="btn btn-default btn-sm" value="New Population" onclick="resetPopulation()" />
         <br /><br />
         <div>
           Create new world:
@@ -240,14 +241,9 @@
 
   </div>
 
-  <script src="lib/vue.js"></script>
-  <script src="lib/lodash.js"></script>
-  <script src="lib/seedrandom.js"></script>
-  <script src="lib/box2d.js"></script>
-  <script src="ghost.js"></script>
-  <script src="path.js"></script>
-  <script src="graphs.js"></script>
-  <script src="car.js"></script>
-  <script src="main.js"></script>
+  <script src="src/draw.js"></script>
+  <script src="src/graphs.js"></script>
+  <script src="src/car.js"></script>
+  <script src="build.js"></script>
 </body>
 </html>
