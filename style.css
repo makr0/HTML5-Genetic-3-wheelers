@@ -76,16 +76,19 @@
       padding: 2px;
       margin-left: 23px;
     }
-      .healthbar .health {
-        height: 100%;
-        width: 100%;
-        background-color: red;
-      }
-      .healthbar .healthtext {
-        position: absolute;
-        top: 0px;
-        left: -20px;
-      }
+    .healthbar .health {
+      height: 100%;
+      width: 100%;
+      background-color: #c44;
+    }
+    .healthbar .health.elite {
+      background-color: #44c;
+    }
+    .healthbar .healthtext {
+      position: absolute;
+      top: 0px;
+      left: -20px;
+    }
 
     #cardef_loader {
       width:900px;

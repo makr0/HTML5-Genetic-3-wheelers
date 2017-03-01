@@ -2,6 +2,7 @@ import Vue from 'vue';
 var _=require('lodash');
 
 import Path from './path';
+import Scoreboard from './scoreboard';
 
 // global vars moved to viewModel
 var vm = new Vue({
@@ -10,13 +11,24 @@ var vm = new Vue({
     gen_counter: 0,
     deadCars: 0,
     generationSize: cw_generationSize,
+    cars: cw_carArray,
     zoom: 40,
     doDraw: true,
     paused: false,
     topScores: new Array(),
-    top10Scores: new Array()
+    top10Scores: new Array(),
+    gen_champions:1,
+    camera: {
+      x: 0,
+      y: 0,
+      speed: 0.5,
+      target: -1 // which car should we follow? -1 = leader
+    }
   },
   methods: {
+    setCameraTarget: function(i) {
+      this.camera.target = i;
+    },
     zoomIn: function() {
       this.zoom = this.zoom * 1.4;
     },
@@ -28,7 +40,7 @@ var vm = new Vue({
       document.getElementById("cars").innerHTML = "";
       cw_clearGraphics();
       cw_carArray = new Array();
-      cw_carScores = new Array();
+      scoreboard.reset();
       vm.topScores = new Array();
       cw_graphTop = new Array();
       cw_graphElite = new Array();
@@ -45,7 +57,7 @@ var vm = new Vue({
     doDraw: function(val) {
       if(this.paused) return;
       if(!val) {
-        cameraspeed = 1;
+        vm.camera.speed = 1;
         cw_stopSimulation();
         cw_runningInterval = setInterval(function(){
           var i = 0;
@@ -57,6 +69,9 @@ var vm = new Vue({
         clearInterval(cw_drawInterval);
         cw_startSimulation();
       }
+    },
+    gen_champions: function(newVal){
+      scoreboard.setEliteSize(newVal);
     }
   }
 });
@@ -84,12 +99,6 @@ var leadercanvas = {
 }
 leadercanvas.ctx= leadercanvas.el.getContext("2d");
 
-var cameraspeed = 0.5;
-var camera = {
-  x: 0,
-  y: 0,
-  target: -1 // which car should we follow? -1 = leader
-};
 var minimapcamera = document.getElementById("minimapcamera").style;
 
 var minimapcanvas = {
@@ -101,7 +110,6 @@ var minimapcanvas = {
 minimapcanvas.ctx = minimapcanvas.el.getContext("2d");
 
 
-var gen_champions = 1;
 var breeding_option = 'random';
 var cw_lambda = 0.5;
 var gen_parentality = 0.2;
@@ -124,7 +132,8 @@ var last_drawn_tile = 0;
 var cw_runningInterval;
 var cw_drawInterval;
 var cw_carArray = new Array();
-var cw_carScores = new Array();
+var scoreboard = new Scoreboard();
+scoreboard.setEliteSize(vm.gen_champions);
 
 var chassisBounds = {
   maxAxis: 1.8,
@@ -168,7 +177,7 @@ minimapcamera.width = 12*minimapcanvas.zoom+"px";
 minimapcamera.height = 6*minimapcanvas.zoom+"px";
 
 function carFactory(car_def) {
-  var car = new Car(world, chassisBounds, wheelBounds, vitalBounds, cw_carScores, motorSpeed, gravity);
+  var car = new Car(world, chassisBounds, wheelBounds, vitalBounds, scoreboard, motorSpeed, gravity);
   if(!_.isUndefined(car_def)) {
     car.init(car_def);
   }
@@ -195,30 +204,29 @@ function cw_generationZero() {
 function cw_nextGeneration() {
   var newGeneration = new Array();
   var newborn;
-  cw_carScores = _.reverse(_.sortBy(cw_carScores, function(a){ return a.s; }));
-  vm.topScores.push(_.extend({gen:vm.gen_counter}, cw_carScores[0]));
+  vm.topScores.push(_.extend({gen:vm.gen_counter}, scoreboard.getBest()));
   vm.topScores = _.reverse(_.sortBy(vm.topScores, function(a){ return a.s; }));
-  debugger;
-  plot_graphs(cw_carScores);
-  for(var k = 0; k < gen_champions; k++) {
-    cw_carScores[k].car_def.is_elite = true;
-    cw_carScores[k].car_def.index = k;
-    newGeneration.push( carFactory(cw_carScores[k].car_def) );
-  }
-  for(k = gen_champions; k < vm.generationSize; k++) {
+  plot_graphs(scoreboard.getAll());
+  var elites = scoreboard.getElite();
+  // copy elite cars
+  _.map(scoreboard.getElite(), function(champion){
+    newGeneration.push( carFactory(champion.car_def) );
+  });
+  // breed new cars with the others
+  for(var k = vm.gen_champions; k < vm.generationSize; k++) {
     var parent1 = cw_getParents();
     var parent2 = parent1;
     while(parent2 == parent1) {
       parent2 = cw_getParents();
     }
-    newborn = cw_makeChild(cw_carScores[parent1].car_def,
-                           cw_carScores[parent2].car_def);
+    newborn = cw_makeChild(scoreboard.getNth(parent1).car_def,
+                           scoreboard.getNth(parent2).car_def);
     newborn = cw_mutate(newborn);
     newborn.is_elite = false;
     newborn.index = k;
     newGeneration.push(carFactory(newborn));
   }
-  cw_carScores = new Array();
+  scoreboard.reset();
   cw_carArray = newGeneration;
   vm.gen_counter++;
   vm.deadCars = 0;
@@ -376,7 +384,7 @@ function cw_setGravity(choice) {
 }
 
 function cw_setEliteSize(clones) {
-  gen_champions = parseInt(clones, 10);
+  vm.gen_champions = parseInt(clones, 10);
 }
 
 function cw_setBreedingOption(choice) {
@@ -393,10 +401,10 @@ function cw_drawScreen() {
   canvas.ctx.clearRect(0,0,canvas.el.width,canvas.el.height);
   canvas.ctx.save();
   cw_setCameraPosition();
-  canvas.ctx.translate(200-(camera.x*vm.zoom), 200+(camera.y*vm.zoom));
+  canvas.ctx.translate(200-(vm.camera.x*vm.zoom), 200+(vm.camera.y*vm.zoom));
   canvas.ctx.scale(vm.zoom, -vm.zoom);
 
-  Floor.draw(canvas, camera);
+  Floor.draw(canvas, vm.camera);
   cw_drawCars();
   canvas.ctx.restore();
   drawLeader();
@@ -413,37 +421,32 @@ function drawLeader() {
 }
 
 function cw_minimapCamera(x, y) {
-  minimapcamera.left = Math.round((2+camera.x) * minimapcanvas.zoom) + "px";
-  minimapcamera.top = Math.round((31-camera.y) * minimapcanvas.zoom) + "px";
+  minimapcamera.left = Math.round((2+vm.camera.x) * minimapcanvas.zoom) + "px";
+  minimapcamera.top = Math.round((31-vm.camera.y) * minimapcanvas.zoom) + "px";
 }
 
 function cw_setCameraTarget(k) {
-  camera.target = k;
+  vm.camera.target = k;
 }
 
 function cw_setCameraPosition() {
-  if(camera.target >= 0) {
-    var cameraTargetPosition = cw_carArray[camera.target].getPosition();
+  if(vm.camera.target >= 0) {
+    var cameraTargetPosition = cw_carArray[vm.camera.target].getPosition();
   } else {
     var cameraTargetPosition = leader.getPosition();
   }
-  var diff_y = camera.y - cameraTargetPosition.y;
-  var diff_x = camera.x - cameraTargetPosition.x;
-  camera.y -= cameraspeed * diff_y;
-  camera.x -= cameraspeed * diff_x;
-  cw_minimapCamera(camera.x, camera.y);
+  var diff_y = vm.camera.y - cameraTargetPosition.y;
+  var diff_x = vm.camera.x - cameraTargetPosition.x;
+  vm.camera.y -= vm.camera.speed * diff_y;
+  vm.camera.x -= vm.camera.speed * diff_x;
+  cw_minimapCamera(vm.camera.x, vm.camera.y);
 }
 
 
 function cw_drawCars() {
-  _(cw_carArray)
-   .filter(function(car) {return car.alive;})
-   .map(function(car) { car.draw( canvas ) } )
-   .commit();
+  _.filter(cw_carArray,function(car) {return car.alive;})
+   .map(function(car) { car.draw( canvas ) } );
 }
-
-
-
 
 function cw_drawMiniMap() {
   minimapcanvas.el.width = minimapcanvas.el.width;
@@ -459,20 +462,24 @@ function cw_drawMiniMap() {
 
 
 function simulationStep() {
-  world.Step(1/box2dfps, 20, 20);
+  world.Step(1/box2dfps, /* velocityIterations */ 10, /* positionIterations */ 10);
+  var viewCars = new Array();
   for(var k = 0; k < vm.generationSize; k++) {
+    viewCars.push({
+      index:cw_carArray[k].car_def.index,
+      health: Math.round((cw_carArray[k].health/vitalBounds.max_health)*100) + "%",
+      is_elite: cw_carArray[k].is_elite
+    });
     if(!cw_carArray[k].alive) {
       continue;
     }
     cw_carArray[k].frames++;
     var position = cw_carArray[k].getPosition();
     cw_carArray[k].minimapmarker.left = Math.round((position.x+5) * minimapcanvas.zoom) + "px";
-    cw_carArray[k].healthBar.width = Math.round((cw_carArray[k].health/vitalBounds.max_health)*100) + "%";
     if(cw_carArray[k].checkDeath()) {
       cw_carArray[k].kill();
       vm.deadCars++;
       if(vm.deadCars >= vm.generationSize) {
-        console.log(cw_carScores);
         cw_newRound();
       }
       if(leader == cw_carArray[k] ) {
@@ -487,6 +494,7 @@ function simulationStep() {
       leader = cw_carArray[k];
     }
   }
+  vm.cars = viewCars;
 }
 
 function cw_findLeader() {
@@ -515,7 +523,7 @@ function cw_newRound() {
   }
 
   cw_nextGeneration();
-  camera.x = camera.y = 0;
+  vm.camera.x = vm.camera.y = 0;
   cw_setCameraTarget(-1);
 }
 
@@ -555,9 +563,7 @@ function cw_confirmResetWorld() {
 
 // initial stuff, only called once (hopefully)
 function cw_init() {
-  // clone silver dot and health bar
   var mmm  = document.getElementsByName('minimapmarker')[0];
-  var hbar = document.getElementsByName('healthbar')[0];
 
   for(var k = 0; k < vm.generationSize; k++) {
 
@@ -566,15 +572,8 @@ function cw_init() {
     newbar.id = "bar"+k;
     newbar.style.paddingTop = k*9+"px";
     minimapholder.appendChild(newbar);
-
-    // health bars
-    var newhealth = hbar.cloneNode(true);
-    newhealth.getElementsByTagName("DIV")[0].id = "health"+k;
-    newhealth.car_index = k;
-    document.getElementById("health").appendChild(newhealth);
   }
   mmm.parentNode.removeChild(mmm);
-  hbar.parentNode.removeChild(hbar);
   floorseed = Math.seedrandom();
   world = new b2World(gravity, doSleep);
   Floor = floorFactory()

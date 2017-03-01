@@ -34,7 +34,8 @@
           <canvas id="mainbox" width="700" height="400" class="background_and_border"></canvas>
           <div id="stats" class="small">
             <strong>Generations:</strong> {{ gen_counter }}<br>
-            <strong>Cars alive:</strong>  {{ generationSize - deadCars }}
+            <strong>Cars alive:</strong>  {{ generationSize - deadCars }}<br/>
+            <strong>watching:</strong>  {{ camera.target }}
           </div>
         </div>
 
@@ -182,9 +183,18 @@
       </div>
         <br />
         <input type="button" class="btn btn-default btn-sm"
-               value="Watch Leader" onclick="cw_setCameraTarget(-1)" />
+               value="Watch Leader"  @click="setCameraTarget(-1)" />
         <canvas id="leadercanvas" width="200" height="200" class="background_and_border"></canvas>
-        <div id="health"></div>
+        <div id="health">
+          <div class="healthbar"
+               v-for="car in cars"
+               v-on:click="setCameraTarget(car.index)">
+            <div name="health" class="health"
+                 :class="{ elite: car.is_elite }"
+              :style="{ width: car.health }"></div>
+            <div class="healthtext">{{car.index}}</div>
+          </div>
+        </div>
         <div id="cars"></div>
       </div>
       <div id="generation"></div>
@@ -233,10 +243,6 @@
         </ul>
       </div>
       <div name="minimapmarker" class="minimapmarker"></div>
-      <div name="healthbar" class="healthbar" onclick="cw_setCameraTarget(this.car_index)">
-        <div name="health" class="health"></div>
-        <div name="healthtext" class="healthtext"></div>
-      </div>
     </div>
 
   </div>

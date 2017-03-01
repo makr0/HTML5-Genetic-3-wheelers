@@ -2,7 +2,7 @@
 /* === Car ================================================================= */
 class Car {
 
-  constructor( world, chassisBounds, wheelBounds, vitalBounds, carScores, motorSpeed, gravity ) {
+  constructor( world, chassisBounds, wheelBounds, vitalBounds, scoreboard, motorSpeed, gravity ) {
     this.cB = chassisBounds;
     this.wB = wheelBounds;
     this.chassis = null;
@@ -11,7 +11,7 @@ class Car {
     this.max_health = vitalBounds.max_health
     this.health = this.max_health;
     this.deathSpeed = vitalBounds.deathSpeed;
-    this.carScores = carScores;
+    this.scoreboard = scoreboard;
     this.motorSpeed = motorSpeed;
     this.gravity = gravity;
   }
@@ -63,20 +63,9 @@ class Car {
     this.car_def = car_def
     this.alive = true;
     this.is_elite = car_def.is_elite;
-    this.healthBar = document.getElementById("health"+car_def.index).style;
-    this.healthBarText = document.getElementById("health"+car_def.index).nextSibling.nextSibling;
-    this.healthBarText.innerHTML = car_def.index;
+    this.healthBar = {width:0};
     this.minimapmarker = document.getElementById("bar"+car_def.index).style;
 
-    if(this.is_elite) {
-      this.healthBar.backgroundColor = "#44c";
-      document.getElementById("bar"+car_def.index).style.borderLeft = "1px solid #44c";
-      document.getElementById("bar"+car_def.index).innerHTML = car_def.index;
-    } else {
-      this.healthBar.backgroundColor = "#c44";
-      document.getElementById("bar"+car_def.index).style.borderLeft = "1px solid #c44";
-      document.getElementById("bar"+car_def.index).innerHTML = car_def.index;
-    }
 
     this.chassis = this.createChassis(car_def.vertex_list, car_def.chassis_density);
     this.wheels = new Array();
@@ -109,16 +98,7 @@ class Car {
   }
 
   kill() {
-    var avgspeed = (this.maxPosition / this.frames);
-    var position = this.maxPosition;
-
-    var score = {
-      car_def: this.car_def,
-            s: position + avgspeed,
-            v: avgspeed,
-            x: position
-    }
-    this.carScores.push(score);
+    this.scoreboard.add(this);
     this.world.DestroyBody(this.chassis);
     _.map(this.wheels,_.bind(this.world.DestroyBody,this.world));
     this.alive = false;
@@ -147,7 +127,6 @@ class Car {
       this.health--;
       if(position .y < -300) this.health = 0; // fell off the track
       if(this.health <= 0) {
-        this.healthBarText.innerHTML = "&#8708;";
         this.healthBar.width = "0";
         return true;
       }
