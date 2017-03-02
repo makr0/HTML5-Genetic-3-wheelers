@@ -1,28 +1,56 @@
 import Vue from 'vue';
-var _=require('lodash');
+import KeenUI from 'keen-ui';
+import _ from 'lodash';
 
 import Path from './path';
 import Scoreboard from './scoreboard';
+
+Vue.use(KeenUI);
 
 // global vars moved to viewModel
 var vm = new Vue({
   el: '#vmroot',
   data: {
-    gen_counter: 0,
-    deadCars: 0,
-    generationSize: cw_generationSize,
     cars: cw_carArray,
-    zoom: 40,
-    doDraw: true,
-    paused: false,
-    topScores: new Array(),
-    top10Scores: new Array(),
-    gen_champions:1,
     camera: {
       x: 0,
       y: 0,
       speed: 0.5,
       target: -1 // which car should we follow? -1 = leader
+    },
+    deadCars: 0,
+    doDraw: true,
+    gen_champions:'1',
+    gen_champions_options: _.range(1,10).map(_.toString),
+    gen_counter: 0,
+    generationSize: cw_generationSize,
+    gravityValue: {label:'Earth', value:'9.81'},
+    mutable_floor: true,
+    paused: false,
+    selectedBreedingOption: {value:'random', label:'Default Random'},
+    top10Scores: new Array(),
+    topScores: new Array(),
+    zoom: 40,
+  },
+  computed: {
+    breeding: function() {
+      return this.selectedBreedingOption.value;
+    },
+    gravity: function() {
+      return new b2Vec2(0.0, -parseFloat(this.gravityValue.value));
+    },
+    gravityOptions: function() {
+      return _('Jupiter-25|Neptune-11|Saturn-10|Earth-9.81|Venus-8.9|Uranus-8.7|Mars-3.7|Mercury-3.7|Moon-1.6')
+      .split('|').map((a)=>{
+        var n=_(a).split('-').first(), k=_(a).split('-').last();
+        return {value: k, label: n + ' ('+k+')' }
+      }).value();
+    },
+    breedingOptions: function() {
+      return [
+        {value:'random', label:'Default Random'},
+        {value:'exp', label:'Exponential Probability'}
+      ];
     }
   },
   methods: {
@@ -36,8 +64,6 @@ var vm = new Vue({
       this.zoom = this.zoom / 1.4;
     },
     resetPopulation: function() {
-      document.getElementById("generation").innerHTML = "";
-      document.getElementById("cars").innerHTML = "";
       cw_clearGraphics();
       cw_carArray = new Array();
       scoreboard.reset();
@@ -71,7 +97,7 @@ var vm = new Vue({
       }
     },
     gen_champions: function(newVal){
-      scoreboard.setEliteSize(newVal);
+      scoreboard.setEliteSize(parseInt(newVal));
     }
   }
 });
@@ -110,7 +136,6 @@ var minimapcanvas = {
 minimapcanvas.ctx = minimapcanvas.el.getContext("2d");
 
 
-var breeding_option = 'random';
 var cw_lambda = 0.5;
 var gen_parentality = 0.2;
 var gen_mutation = 0.05;
@@ -118,13 +143,10 @@ var mutation_range = 1;
 var nWheels = 2;
 var nAttributes = 9 + 3 * nWheels; // change this when genome changes
 
-var gravity = new b2Vec2(0.0, -9.81);
 // calculate only moving bodies
 var doSleep = true;
 
 var world;
-
-var mutable_floor = true;
 
 var maxFloorTiles = 200;
 var last_drawn_tile = 0;
@@ -177,7 +199,7 @@ minimapcamera.width = 12*minimapcanvas.zoom+"px";
 minimapcamera.height = 6*minimapcanvas.zoom+"px";
 
 function carFactory(car_def) {
-  var car = new Car(world, chassisBounds, wheelBounds, vitalBounds, scoreboard, motorSpeed, gravity);
+  var car = new Car(world, chassisBounds, wheelBounds, vitalBounds, scoreboard, motorSpeed, vm.gravity);
   if(!_.isUndefined(car_def)) {
     car.init(car_def);
   }
@@ -185,7 +207,7 @@ function carFactory(car_def) {
 }
 
 function floorFactory() {
-  return new Path(world, maxFloorTiles, mutable_floor, floorseed, groundPieceBounds);
+  return new Path(world, maxFloorTiles, vm.mutable_floor, floorseed, groundPieceBounds);
 }
 
 /* ========================================================================= */
@@ -236,10 +258,10 @@ function cw_nextGeneration() {
 }
 
 function cw_getParents() {
-  if(breeding_option == 'random'){
+  if(vm.breeding == 'random'){
     var r = Math.random();
     return Math.floor(r * vm.generationSize) % vm.generationSize;
-  } else if(breeding_option == 'exp'){
+  } else if(vm.breeding == 'exp'){
    var r = Math.random();
    var x = Math.log(1-r)/(-1*cw_lambda);
    if (x >= vm.generationSize - 1)
@@ -375,22 +397,6 @@ function cw_setMutationRange(range) {
   mutation_range = parseFloat(range);
 }
 
-function cw_setMutableFloor(choice) {
-  mutable_floor = (choice==1);
-}
-
-function cw_setGravity(choice) {
-  gravity = new b2Vec2(0.0, -parseFloat(choice));
-}
-
-function cw_setEliteSize(clones) {
-  vm.gen_champions = parseInt(clones, 10);
-}
-
-function cw_setBreedingOption(choice) {
-  breeding_option = choice;
-}
-
 /* ==== END Genration ====================================================== */
 /* ========================================================================= */
 
@@ -509,16 +515,16 @@ function cw_findLeader() {
 }
 
 function cw_newRound() {
-  if (mutable_floor) {
+  if (vm.mutable_floor) {
     floorseed = Math.seedrandom();
 
-    world = new b2World(gravity, doSleep);
+    world = new b2World(vm.gravity, doSleep);
     Floor = floorFactory()
     cw_drawMiniMap();
   } else {
     // CHECK GRAVITY CHANGES
-    if (world.GetGravity().y != gravity.y) {
-      world.SetGravity(gravity);
+    if (world.GetGravity().y != vm.gravity.y) {
+      world.SetGravity(vm.gravity);
     }
   }
 
@@ -553,14 +559,6 @@ function cw_resetWorld() {
   cw_startSimulation();
 }
 
-function cw_confirmResetWorld() {
-  if(confirm('Really reset world?')) {
-    cw_resetWorld();
-  } else {
-    return false;
-  }
-}
-
 // initial stuff, only called once (hopefully)
 function cw_init() {
   var mmm  = document.getElementsByName('minimapmarker')[0];
@@ -575,7 +573,7 @@ function cw_init() {
   }
   mmm.parentNode.removeChild(mmm);
   floorseed = Math.seedrandom();
-  world = new b2World(gravity, doSleep);
+  world = new b2World(vm.gravity, doSleep);
   Floor = floorFactory()
   cw_drawMiniMap();
   cw_generationZero();

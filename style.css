@@ -1,8 +1,17 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 100%;
+}
     body, input {
       font-family: Helvetica, sans serif;
     }
     body {
-      background: #eee;
+      background: #fff;
     }
     #mainbox {
       width: 700px;
