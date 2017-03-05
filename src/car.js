@@ -68,6 +68,7 @@ class Car {
 
 
     this.chassis = this.createChassis(car_def.vertex_list, car_def.chassis_density);
+    this.drivingAngleSum = this.getChassisAngle();
     this.wheels = new Array();
     var that = this;
     var joint_def = new b2RevoluteJointDef();
@@ -95,6 +96,15 @@ class Car {
 
   getPosition() {
     return this.chassis.GetPosition();
+  }
+  getDrivingAngle() {
+    return this.getChassisAngle() - this.getAverageDrivingAngle();
+  }
+  getAverageDrivingAngle() {
+    return this.drivingAngleSum / (this.frames+1);
+  }
+  getChassisAngle() {
+   return this.chassis.GetAngle();
   }
 
   kill() {
@@ -187,6 +197,15 @@ class Car {
     body.CreateFixture(fix_def);
     return body;
   }
+  step() {
+    this.frames++;
+    this.drivingAngleSum += this.getChassisAngle();
+    if(this.checkDeath()) {
+      this.kill();
+      return true;
+    }
+    return false;
+  }
 
   draw(canvas) {
     canvas.ctx.strokeStyle = "#444";
@@ -222,3 +241,4 @@ class Car {
   }
 }
 
+export default Car;

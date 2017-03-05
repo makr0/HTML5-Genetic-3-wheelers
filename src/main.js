@@ -3,6 +3,7 @@ import KeenUI from 'keen-ui';
 import _ from 'lodash';
 
 import Path from './path';
+import Car from './car';
 import Scoreboard from './scoreboard';
 
 Vue.use(KeenUI);
@@ -26,7 +27,9 @@ var vm = new Vue({
     generationSize: cw_generationSize,
     gravityValue: {label:'Earth', value:'9.81'},
     mutable_floor: true,
-    paused: false,
+    mutationrangeValue: {label:'100%', value:'1'},
+    mutationrateValue:  {label:'5%', value:'0.05'},
+    paused: true,
     selectedBreedingOption: {value:'random', label:'Default Random'},
     top10Scores: new Array(),
     topScores: new Array(),
@@ -38,6 +41,12 @@ var vm = new Vue({
     },
     gravity: function() {
       return new b2Vec2(0.0, -parseFloat(this.gravityValue.value));
+    },
+    mutationrange: function() {
+      return parseFloat(this.mutationrangeValue.value);
+    },
+    mutationrate: function()  {
+      return parseFloat(this.mutationrateValue.value);
     },
     gravityOptions: function() {
       return _('Jupiter-25|Neptune-11|Saturn-10|Earth-9.81|Venus-8.9|Uranus-8.7|Mars-3.7|Mercury-3.7|Moon-1.6')
@@ -51,6 +60,15 @@ var vm = new Vue({
         {value:'random', label:'Default Random'},
         {value:'exp', label:'Exponential Probability'}
       ];
+    },
+    mutationrateOptions: function() {
+      return        _.range(0,0.06,0.01)
+            .concat(_.range(0.1,0.60,0.1))
+            .concat([0.75,1])
+            .map(function(k){ k=Math.round(k*100); return {'value': k/100, 'label': k+'%'};} );
+    },
+    mutationrangeOptions: function() {
+      return this. mutationrateOptions;
     }
   },
   methods: {
@@ -68,12 +86,6 @@ var vm = new Vue({
       cw_carArray = new Array();
       scoreboard.reset();
       vm.topScores = new Array();
-      cw_graphTop = new Array();
-      cw_graphElite = new Array();
-      cw_graphAverage = new Array();
-      lastmax = 0;
-      lastaverage = 0;
-      lasteliteaverage = 0;
       swapPoint1 = 0;
       swapPoint2 = 0;
       cw_generationZero();
@@ -121,7 +133,8 @@ canvas.ctx = canvas.el.getContext("2d");
 var leadercanvas = {
   el: document.getElementById("leadercanvas"),
   ctx: null,
-  zoom: vm.zoom
+  zoom: vm.zoom,
+  rotation:0
 }
 leadercanvas.ctx= leadercanvas.el.getContext("2d");
 
@@ -138,8 +151,6 @@ minimapcanvas.ctx = minimapcanvas.el.getContext("2d");
 
 var cw_lambda = 0.5;
 var gen_parentality = 0.2;
-var gen_mutation = 0.05;
-var mutation_range = 1;
 var nWheels = 2;
 var nAttributes = 9 + 3 * nWheels; // change this when genome changes
 
@@ -332,7 +343,7 @@ function cw_makeChild(car_def1, car_def2) {
 
 
 function cw_mutate1(old, min, range) {
-    var span = range * mutation_range;
+    var span = range * vm.mutationrange;
     var base = old - 0.5 * span;
     if (base < min)
         base = min;
@@ -342,7 +353,7 @@ function cw_mutate1(old, min, range) {
 }
 
 function cw_mutatev(car_def, n, xfact, yfact) {
-    if (Math.random() >= gen_mutation)
+    if (Math.random() >= vm.mutationrate)
         return;
 
     var v = car_def.vertex_list[n];
@@ -357,15 +368,15 @@ function cw_mutatev(car_def, n, xfact, yfact) {
 
 
 function cw_mutate(car_def) {
-  var wheel_m_rate = mutation_range < gen_mutation
-        ? mutation_range : gen_mutation;
+  var wheel_m_rate = vm.mutationrange < vm.mutationrate
+        ? vm.mutationrange : vm.mutationrate;
 
   _.map(car_def.wheels,function(wheel){
-    if(Math.random() < gen_mutation)
+    if(Math.random() < vm.mutationrate)
       wheel.radius = cw_mutate1( wheel.radius, wheelBounds.minRadius, wheelBounds.maxRadius);
     if(Math.random() < wheel_m_rate)
       wheel.vertex =  _.sample(_.range(car_def.vertex_list.length));
-    if(Math.random() < gen_mutation)
+    if(Math.random() < vm.mutationrate)
       wheel.density = cw_mutate1( wheel.density, wheelBounds.minDensity, wheelBounds.maxDensity );
   });
 
@@ -389,13 +400,6 @@ function cw_chooseParent(curparent, attributeIndex) {
   }
 }
 
-function cw_setMutation(mutation) {
-  gen_mutation = parseFloat(mutation);
-}
-
-function cw_setMutationRange(range) {
-  mutation_range = parseFloat(range);
-}
 
 /* ==== END Genration ====================================================== */
 /* ========================================================================= */
@@ -417,12 +421,16 @@ function cw_drawScreen() {
 }
 
 function drawLeader() {
+  var targetCar = getTargetCar();
   leadercanvas.ctx.clearRect(0,0,leadercanvas.el.width,leadercanvas.el.height);
   leadercanvas.ctx.save();
-  var cam = leader.getPosition();
+  leadercanvas.ctx.translate(leadercanvas.el.width/2, leadercanvas.el.width/2);
+  leadercanvas.ctx.rotate( targetCar.getDrivingAngle() );
+  leadercanvas.ctx.translate(-leadercanvas.el.width/2, -leadercanvas.el.width/2);
+  var cam = targetCar.getPosition();
   leadercanvas.ctx.translate(100-(cam.x*vm.zoom), 100+(cam.y*vm.zoom));
   leadercanvas.ctx.scale(vm.zoom, -vm.zoom);
-  leader.draw( leadercanvas );
+  targetCar.draw( leadercanvas );
   leadercanvas.ctx.restore();
 }
 
@@ -434,13 +442,16 @@ function cw_minimapCamera(x, y) {
 function cw_setCameraTarget(k) {
   vm.camera.target = k;
 }
+function getTargetCar(){
+  if(vm.camera.target >= 0) {
+    return cw_carArray[vm.camera.target];
+  } else {
+    return leader;
+  }
+}
 
 function cw_setCameraPosition() {
-  if(vm.camera.target >= 0) {
-    var cameraTargetPosition = cw_carArray[vm.camera.target].getPosition();
-  } else {
-    var cameraTargetPosition = leader.getPosition();
-  }
+  var cameraTargetPosition = getTargetCar().getPosition();
   var diff_y = vm.camera.y - cameraTargetPosition.y;
   var diff_x = vm.camera.x - cameraTargetPosition.x;
   vm.camera.y -= vm.camera.speed * diff_y;
@@ -470,6 +481,7 @@ function cw_drawMiniMap() {
 function simulationStep() {
   world.Step(1/box2dfps, /* velocityIterations */ 10, /* positionIterations */ 10);
   var viewCars = new Array();
+  var justDied = false;
   for(var k = 0; k < vm.generationSize; k++) {
     viewCars.push({
       index:cw_carArray[k].car_def.index,
@@ -478,27 +490,25 @@ function simulationStep() {
     });
     if(!cw_carArray[k].alive) {
       continue;
-    }
-    cw_carArray[k].frames++;
-    var position = cw_carArray[k].getPosition();
-    cw_carArray[k].minimapmarker.left = Math.round((position.x+5) * minimapcanvas.zoom) + "px";
-    if(cw_carArray[k].checkDeath()) {
-      cw_carArray[k].kill();
-      vm.deadCars++;
-      if(vm.deadCars >= vm.generationSize) {
-        cw_newRound();
+    } else {
+      justDied = cw_carArray[k].step();
+      if(justDied) {
+        vm.deadCars++;
+        if(leader == cw_carArray[k] ) {
+          // leader just died, find new leader
+          leader = cw_findLeader();
+        }
+        continue;
       }
-      if(leader == cw_carArray[k] ) {
-        console.log('leader was killed');
-        // leader is dead, find new leader
-        leader = cw_findLeader();
-      }
-      continue;
     }
+    cw_carArray[k].minimapmarker.left = Math.round((cw_carArray[k].getPosition().x+5) * minimapcanvas.zoom) + "px";
     // current car is faster than leader, make it the new leader
-    if(position.x > leader.getPosition().x) {
+    if(cw_carArray[k].getPosition().x > leader.getPosition().x) {
       leader = cw_carArray[k];
     }
+  }
+  if(vm.deadCars >= vm.generationSize) {
+    cw_newRound();
   }
   vm.cars = viewCars;
 }
@@ -531,6 +541,7 @@ function cw_newRound() {
   cw_nextGeneration();
   vm.camera.x = vm.camera.y = 0;
   cw_setCameraTarget(-1);
+  leadercanvas.rotation = 0;
 }
 
 function cw_startSimulation() {
@@ -579,6 +590,7 @@ function cw_init() {
   cw_generationZero();
   cw_runningInterval = setInterval(simulationStep, Math.round(1000/box2dfps));
   cw_drawInterval    = setInterval(cw_drawScreen,  Math.round(1000/screenfps));
+  vm.paused=false;
 }
 
 cw_init();

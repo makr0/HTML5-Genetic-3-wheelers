@@ -10,6 +10,7 @@ class Path {
     this.seed = seed;
     this.tiles = new Array();
     this.gpB = groundPieceBounds;
+    this.roughness = mutable ? 1.2 : 1.5;
     this.createPath();
   }
   createPath() {
@@ -18,13 +19,8 @@ class Path {
     this.tiles = new Array();
     Math.seedrandom(this.seed);
     for(var k = 0; k < this.maxTiles; k++) {
-      if (!this.mutable) {
-        // keep old impossible tracks if not using mutable floors
-        last_tile = this.createPathTile(tile_position, (Math.random()*3 - 1.5) * 1.5*k/this.maxTiles);
-      } else {
-        // if path is mutable over races, create smoother tracks
-        last_tile = this.createPathTile(tile_position, (Math.random()*3 - 1.5) * 1.2*k/this.maxTiles);
-      }
+      last_tile = this.createPathTile(tile_position, (Math.random()*3 - 1.5) * this.roughness*k/this.maxTiles);
+
       // last_tile = this.createPathTile(tile_position, 0);
       this.tiles.push(last_tile);
       var last_fixture = last_tile.GetFixtureList();
